@@ -37,20 +37,13 @@ int IsSystemCamera(wchar_t *pszFname, BOOL *pIsSysCam)
 
 	if (SUCCEEDED(hr) && spCameraMf)
 	{
-		hr = spCameraMf->IsSystemCamera(pszFname, pIsSysCam);
+		hr = spCameraMf->IsSystemCamera(pszFname, pIsSysCam, (LONG*)&retcode);
 
 		if (SUCCEEDED(hr))
 		{
-			if (*pIsSysCam)
-			{
-				_tprintf(L"\n%s is installed in the system.\n", pszFname);
-				retcode = (int)TRUE;
-			}
-			else
-			{
-				_tprintf(L"\n%s is not installed in the system.\n", pszFname);
-				retcode = (int)FALSE;
-			}
+			*pIsSysCam
+				? _tprintf(L"\n%s is installed in the system (index = %d).\n", pszFname, retcode)
+				: _tprintf(L"\n%s is not installed in the system.\n", pszFname);
 		}
 		else
 		{			

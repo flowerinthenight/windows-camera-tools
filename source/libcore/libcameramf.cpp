@@ -878,7 +878,7 @@ public:
 		return S_OK;
 	}
 
-	HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera)
+	HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex)
 	{
 		//
 		// We just do camera enumeration here so no need for initialization. We just go through the whole process
@@ -890,7 +890,7 @@ public:
 		BOOL bCamPresent = FALSE;
 		BOOL bReturn = FALSE;
 		HRESULT hr = E_FAIL;
-		DWORD dwDevIndex = -1;
+		LONG lDevIndex = -1;
 
 		do
 		{
@@ -952,9 +952,10 @@ public:
 						if ((_wcsicmp(pszFriendlyNameTmp, pszFriendlyName)) == 0)
 						{
 							bCamPresent = TRUE;
-							dwDevIndex = i;
+							lDevIndex = i;
+							*pIndex = i;
 
-							EventWriteNumberInfo(M, FL, FN, L"Found. Index @", dwDevIndex);
+							EventWriteNumberInfo(M, FL, FN, L"Found. Index @", lDevIndex);
 
 							break;
 						}

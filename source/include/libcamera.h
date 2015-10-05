@@ -98,7 +98,7 @@ struct ICameraMf : public IUnknown {
 	virtual HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize) = 0;
 	virtual HRESULT StartRenderAsync(wchar_t *pszFriendlyName) = 0;
 	virtual HRESULT StopRenderAsync() = 0;
-	virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera) = 0;
+	virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex) = 0;
 	virtual HRESULT MfDumpCameraInfo(wchar_t *pszFriendlyName) = 0;
 };
 
