@@ -28,7 +28,7 @@ void ErrorCom(HRESULT hr, TCHAR *pszExtra)
 	_com_error err(hr);
 	LPCTSTR szErrorText = err.ErrorMessage();
 	TCHAR szDump[MAX_PATH];
-	StringCchPrintf(szDump, 100, L"Error %s: %s (0x%x)\n", pszExtra, szErrorText, hr);
+	StringCchPrintf(szDump, 100, L"Error %s: %s (hr = 0x%x)\n", pszExtra, szErrorText, hr);
 	_tprintf(szDump);
 }
 

@@ -55,6 +55,7 @@ typedef enum {
 	CameraFlashOff = 0,
 	CameraFlashOn,
 	CameraFlashAuto,
+	CameraFlashCheckCount,
 } CameraFlashEnum;
 
 struct IBufferLock : public IUnknown {

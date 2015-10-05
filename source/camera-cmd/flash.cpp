@@ -72,7 +72,7 @@ int SetupFlash(wchar_t *pszFname, wchar_t *pszState, BOOL bSetFlash)
 
 				hr = spCameraDs->GetFlash(&currFlash, &lFlags);
 
-				if (SUCCEEDED(hr))
+				if (SUCCEEDED(hr) && (currFlash >= -1 && currFlash <= CameraFlashCheckCount))
 				{
 					_tprintf(L"Output: Operation successful.\n");
 					_tprintf(L"Output: Current flash settings: %d\n", currFlash);
