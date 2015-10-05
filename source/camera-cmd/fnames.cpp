@@ -19,28 +19,47 @@
  */
 
 #include "stdafx.h"
+#include "fnames.h"
+#include "..\include\libcamera.h"
 #include "common.h"
-#include <sstream>
-using namespace std;
+#include "appcontext.h"
 
-void ErrorCom(HRESULT hr, TCHAR *pszExtra)
+int DispatchFriendlyNames(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 {
-	_com_error err(hr);
-	LPCTSTR szErrorText = err.ErrorMessage();
-	TCHAR szDump[MAX_PATH];
-	StringCchPrintf(szDump, 100, L"Error %s: %s (0x%x)\n", pszExtra, szErrorText, hr);
-	_tprintf(szDump);
-}
+	CContext *pCt = (CContext*)pContext;
+	ICameraMf *pCamMf = NULL;
+	HRESULT hr = E_FAIL;
 
-vector<wstring> &split(const wstring &s, wchar_t delim, vector<wstring> &elems)
-{
-	wstringstream ss(s);
-	wstring item;
+	hr = CreateCameraMfInstance(&pCamMf);
 
-	while (std::getline(ss, item, delim))
+	if (SUCCEEDED(hr) && pCamMf)
 	{
-		elems.push_back(item);
+		wchar_t *pszNames = NULL;
+		LONG cbSize = 0;
+
+		hr = pCamMf->GetFriendlyNames(&pszNames, &cbSize);
+
+		if (pszNames)
+		{
+			vector<std::wstring> names;
+			wstring wstrnames(pszNames);
+
+			split(wstrnames, L';', names);
+
+			_tprintf(L"Available camera(s):\n");
+
+			for (int i = 0; i < names.size(); i++)
+			{
+				_tprintf(L"%d. %s\n", i + 1, names.at(i).c_str());
+			}
+
+			free(pszNames);
+		}
+
+		pCamMf->Release();
 	}
 
-	return elems;
+	*pCt->m_pCmdSupported = TRUE;
+
+	return NOERROR;
 }

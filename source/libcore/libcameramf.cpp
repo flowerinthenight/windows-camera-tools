@@ -599,6 +599,165 @@ public:
 		return hr;
 	}
 
+	//
+	// Param 'ppFriendlyNames' will be allocated here based on the required size. Caller should call free on 'ppFriendlyNames'
+	// after call. If more than one cameras detected, names will be separated by a semicolon (;).
+	//
+	HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize)
+	{
+		ChooseDeviceParam param = { 0 };
+		IMFAttributes *pAttributes = NULL;
+		BOOL bReturn = FALSE;
+		HRESULT hr = E_FAIL;
+		DWORD dwDevIndex = -1;
+		wchar_t *pszOldNames = NULL;
+		wchar_t *pszNames = NULL;
+		size_t cchTotal = 0;
+
+		do
+		{
+			*pcbSize = 0;
+
+			//
+			// Initialize an attribute store to specify enumeration parameters.
+			//
+			hr = MFCreateAttributes(&pAttributes, 1);
+
+			if (FAILED(hr))
+			{
+				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+				break;
+			}
+
+			//
+			// Ask for source type = video capture devices.
+			//
+			hr = pAttributes->SetGUID(
+				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+
+			if (FAILED(hr))
+			{
+				EventWriteHresultError(M, FL, FN, L"SetGUID", hr);
+				break;
+			}
+
+			//
+			// Enumerate devices.
+			//
+			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
+
+			if (FAILED(hr))
+			{
+				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+				break;
+			}
+
+			if (param.count)
+			{
+				BOOL bSuccess = TRUE;
+
+				for (DWORD i = 0; i < param.count; i++)
+				{
+					wchar_t *pszFriendlyNameTmp = NULL;
+
+#pragma warning(suppress: 6387)
+					hr = param.ppDevices[i]->GetAllocatedString(
+						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+						&pszFriendlyNameTmp,
+						NULL);
+
+					if (FAILED(hr))
+					{
+						EventWriteHresultError(M, FL, FN, L"HrError MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME", hr);
+						bSuccess = FALSE;
+						break;
+					}
+
+					if (pszFriendlyNameTmp)
+					{
+						EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
+
+						size_t cchLen = 0;
+
+						StringCchLength(pszFriendlyNameTmp, MAX_PATH, &cchLen);
+						EventWriteNumberInfo(M, FL, FN, L"cchLen", cchLen);
+						
+						cchTotal += cchLen + 2;
+
+						pszOldNames = pszNames;
+
+						pszNames = (wchar_t*)realloc(pszNames, cchTotal * sizeof(wchar_t));
+
+						if (pszNames)
+						{
+							if (i == 0)
+							{
+								//
+								// So 'StringCchCat' will work on first concatenate.
+								//
+								pszNames[0] = L'\0';
+							}
+
+							StringCchCat(pszNames, cchTotal, pszFriendlyNameTmp);
+							StringCchCat(pszNames, cchTotal, L";");							
+						}
+						else
+						{
+							EventWriteLastError(M, FL, FN, L"Error realloc", GetLastError());
+							free(pszOldNames);
+							bSuccess = FALSE;
+							break;
+						}
+
+						CoTaskMemFree(pszFriendlyNameTmp);
+					}
+				}
+
+				if (bSuccess)
+				{
+					size_t cchLen = 0, alloc = 0;
+
+					StringCchLength(pszNames, cchTotal, &cchLen);
+					EventWriteNumberInfo(M, FL, FN, L"cchLen (1st)", cchLen);
+
+					//
+					// Remove the last semicolon.
+					//
+					pszNames[cchLen - 1] = L'\0';
+					EventWriteWideStrInfo(M, FL, FN, L"Name list", pszNames);
+
+					StringCchLength(pszNames, cchTotal, &cchLen);
+					EventWriteNumberInfo(M, FL, FN, L"cchLen (2nd)", cchLen);
+
+					alloc = (cchLen * sizeof(wchar_t)) + sizeof(wchar_t);
+
+					*ppFriendlyNames = (wchar_t*)malloc(alloc);
+
+					if (*ppFriendlyNames)
+					{
+						StringCchCopy(*ppFriendlyNames, alloc, pszNames);
+						*pcbSize = alloc;
+					}
+				}
+			}
+		}
+		while (false);
+
+		if (pszNames) free(pszNames);
+
+		SafeRelease(&pAttributes);
+
+		for (DWORD i = 0; i < param.count; i++)
+		{
+			SafeRelease(&param.ppDevices[i]);
+		}
+
+		CoTaskMemFree(param.ppDevices);
+
+		return hr;
+	}
+
 	HRESULT StartRenderAsync(wchar_t *pszFriendlyName)
 	{
 		if (!m_bInitialized) return E_NOT_VALID_STATE;

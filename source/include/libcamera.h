@@ -95,6 +95,7 @@ struct ICameraDs : public IUnknown {
 //
 struct ICameraMf : public IUnknown {
 	virtual HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnFrameCallback) = 0;
+	virtual HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize) = 0;
 	virtual HRESULT StartRenderAsync(wchar_t *pszFriendlyName) = 0;
 	virtual HRESULT StopRenderAsync() = 0;
 	virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera) = 0;

@@ -21,10 +21,5 @@
 #pragma once
 
 #include <Windows.h>
-#include <comdef.h>
-#include <strsafe.h>
-#include <string>
-#include <vector>
 
-void ErrorCom(HRESULT hr, TCHAR *pszExtra);
-std::vector<std::wstring> &split(const std::wstring &s, wchar_t delim, std::vector<std::wstring> &elems);
+int DispatchFriendlyNames(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext);

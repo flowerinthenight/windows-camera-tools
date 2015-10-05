@@ -84,6 +84,7 @@
     <ClInclude Include="appcontext.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="flash.h" />
+    <ClInclude Include="fnames.h" />
     <ClInclude Include="issyscam.h" />
     <ClInclude Include="privacy.h" />
     <ClInclude Include="stdafx.h" />
@@ -92,6 +93,7 @@
   <ItemGroup>
     <ClCompile Include="common.cpp" />
     <ClCompile Include="flash.cpp" />
+    <ClCompile Include="fnames.cpp" />
     <ClCompile Include="issyscam.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="privacy.cpp" />

@@ -37,6 +37,7 @@ using namespace std;
 #include "flash.h"
 #include "privacy.h"
 #include "issyscam.h"
+#include "fnames.h"
 #include "common.h"
 
 #if _DEBUG
@@ -97,21 +98,36 @@ int Junk(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 {
 	CContext *pCt = (CContext*)pContext;
 
-	ICameraDs *pCamDs = NULL;
+	ICameraMf *pCamMf = NULL;
 	HRESULT hr = E_FAIL;
 
-	hr = CreateCameraDsInstance(&pCamDs);
+	hr = CreateCameraMfInstance(&pCamMf);
 
-	if (SUCCEEDED(hr) && pCamDs)
+	if (SUCCEEDED(hr) && pCamMf)
 	{
-		hr = pCamDs->Initialize(L"Integrated Camera");
+		wchar_t *pszNames = NULL;
+		LONG cbSize = 0;
 
-		if (SUCCEEDED(hr))
+		hr = pCamMf->GetFriendlyNames(&pszNames, &cbSize);
+
+		if (pszNames)
 		{
-			hr = pCamDs->LaunchPropertiesFrame();
+			// _tprintf(L"Names (%d) = %s\n", cbSize, pszNames);
+
+			std::vector<std::wstring> names;
+			std::wstring wstrnames(pszNames);
+
+			split(wstrnames, L';', names);
+
+			for (int i = 0; i < names.size(); i++)
+			{
+				_tprintf(L"Name = %s\n", names.at(i).c_str());
+			}
+
+			free(pszNames);
 		}
 
-		pCamDs->Release();
+		pCamMf->Release();
 	}
 
 	*pCt->m_pCmdSupported = TRUE;
@@ -122,6 +138,7 @@ int Junk(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 static ARG_DISPATCH_TABLE pdt[] = {
 	{ L"junk", Junk },
 	{ L"help", Help },
+	{ L"fnames", DispatchFriendlyNames },
 	{ L"flash", DispatchFlash },
 	{ L"privacy", DispatchPrivacy },
 	{ L"issyscam", DispatchIsSystemCamera },
