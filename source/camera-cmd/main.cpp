@@ -56,11 +56,22 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"    camera-cmd.exe option <params...>\n\n");
 	_tprintf(L"Options:\n\n");
 	_tprintf(L"    fnames\n\n");
-	_tprintf(L"        List the available/attached camera(s) in the system. Return\n");
+	_tprintf(L"        Lists the available/attached camera(s) in the system. Returns\n");
 	_tprintf(L"        the number of available camera(s) found if any, otherwise,\n");
-	_tprintf(L"        return -1.\n\n");
+	_tprintf(L"        returns -1.\n\n");
+	_tprintf(L"    issyscam\n\n");
+	_tprintf(L"        Returns the index of the camera friendly name being queried.\n");
+	_tprintf(L"        Returns -1 on failure, or when the camera is not found.\n\n");
+	_tprintf(L"        Supported parameters:\n\n");
+	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
+	_tprintf(L"        camera_friendly_name\n\n");
+	_tprintf(L"            Friendly name of the camera device/driver. You can use\n");
+	_tprintf(L"            the 'fnames' parameter for the friendly name(s) or see\n");
+	_tprintf(L"            Device Manager -> Imaging devices.\n\n");
+	_tprintf(L"        Example:\n\n");
+	_tprintf(L"        camera-cmd.exe issyscam -fname:Integrated Camera\n\n");
 	_tprintf(L"    privacy\n\n");
-	_tprintf(L"        Control the camera privacy properties. On query, it will\n");
+	_tprintf(L"        Controls the camera privacy properties. On query, it will\n");
 	_tprintf(L"        return the current state. On set, it will return 0 on\n");
 	_tprintf(L"        success, -1 on failure.\n\n");
 	_tprintf(L"        Supported parameters:\n\n");
@@ -76,7 +87,7 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"        camera-cmd.exe privacy -fname:Integrated Camera\n");
 	_tprintf(L"        camera-cmd.exe privacy -fname:Integrated Camera -state:1\n\n");
 	_tprintf(L"    flash\n\n");
-	_tprintf(L"        Control the camera flash properties. On query, it will\n");
+	_tprintf(L"        Controls the camera flash properties. On query, it will\n");
 	_tprintf(L"        return the current state. On set, it will return 0 on\n");
 	_tprintf(L"        success, -1 on failure.\n\n");
 	_tprintf(L"        Supported parameters:\n\n");
@@ -91,18 +102,7 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"        2 - set camera flash to auto flash.\n\n");
 	_tprintf(L"        Examples:\n\n");
 	_tprintf(L"        camera-cmd.exe flash -fname:Integrated Camera\n");
-	_tprintf(L"        camera-cmd.exe flash -fname:Integrated Camera -state:2\n\n");	
-	_tprintf(L"    issyscam\n\n");
-	_tprintf(L"        Return the index of the camera friendly name being queried.\n");
-	_tprintf(L"        Returns -1 on failure, or when the camera is not found.\n\n");
-	_tprintf(L"        Supported parameters:\n\n");
-	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
-	_tprintf(L"        camera_friendly_name\n\n");
-	_tprintf(L"            Friendly name of the camera device/driver. You can use\n");
-	_tprintf(L"            the 'fnames' parameter for the friendly name(s) or see\n");
-	_tprintf(L"            Device Manager -> Imaging devices.\n\n");
-	_tprintf(L"        Example:\n\n");
-	_tprintf(L"        camera-cmd.exe issyscam -fname:Integrated Camera\n\n");
+	_tprintf(L"        camera-cmd.exe flash -fname:Integrated Camera -state:2\n\n");
 
 	*pCt->m_pCmdSupported = TRUE;
 
