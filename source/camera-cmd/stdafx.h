@@ -10,4 +10,4 @@
 #include <stdio.h>
 #include <tchar.h>
 
-#define DEFAULT_ERROR 255
+#define DEFAULT_ERROR -1

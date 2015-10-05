@@ -56,11 +56,13 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"    camera-cmd.exe option <params...>\n\n");
 	_tprintf(L"Options:\n\n");
 	_tprintf(L"    fnames\n\n");
-	_tprintf(L"        List the available/attached camera(s) in the system.\n\n");
+	_tprintf(L"        List the available/attached camera(s) in the system. Return\n");
+	_tprintf(L"        the number of available camera(s) found if any, otherwise,\n");
+	_tprintf(L"        return -1.\n\n");
 	_tprintf(L"    privacy\n\n");
 	_tprintf(L"        Control the camera privacy properties. On query, it will\n");
 	_tprintf(L"        return the current state. On set, it will return 0 on\n");
-	_tprintf(L"        success, 255 on failure.\n\n");
+	_tprintf(L"        success, -1 on failure.\n\n");
 	_tprintf(L"        Supported parameters:\n\n");
 	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
 	_tprintf(L"        camera_friendly_name\n\n");
@@ -76,7 +78,7 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"    flash\n\n");
 	_tprintf(L"        Control the camera flash properties. On query, it will\n");
 	_tprintf(L"        return the current state. On set, it will return 0 on\n");
-	_tprintf(L"        success, 255 on failure.\n\n");
+	_tprintf(L"        success, -1 on failure.\n\n");
 	_tprintf(L"        Supported parameters:\n\n");
 	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
 	_tprintf(L"        camera_friendly_name\n\n");
@@ -92,7 +94,7 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"        camera-cmd.exe flash -fname:Integrated Camera -state:2\n\n");	
 	_tprintf(L"    issyscam\n\n");
 	_tprintf(L"        Return the index of the camera friendly name being queried.\n");
-	_tprintf(L"        Returns 255 on failure, or when the camera is not found.\n\n");
+	_tprintf(L"        Returns -1 on failure, or when the camera is not found.\n\n");
 	_tprintf(L"        Supported parameters:\n\n");
 	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
 	_tprintf(L"        camera_friendly_name\n\n");
@@ -164,7 +166,7 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	wchar_t szCtrl[MAX_PATH] = { 0 };
 	wchar_t szParam[MAX_PATH] = { 0 };
-	int retcode = 255;
+	int retcode = -1;
 	BOOL bSupportedCmd = FALSE;
 	HRESULT hr = S_OK;
 

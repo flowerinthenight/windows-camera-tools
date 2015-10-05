@@ -29,6 +29,7 @@ int DispatchFriendlyNames(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContex
 	CContext *pCt = (CContext*)pContext;
 	ICameraMf *pCamMf = NULL;
 	HRESULT hr = E_FAIL;
+	int retcode = DEFAULT_ERROR;
 
 	hr = CreateCameraMfInstance(&pCamMf);
 
@@ -46,11 +47,16 @@ int DispatchFriendlyNames(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContex
 
 			split(wstrnames, L';', names);
 
-			_tprintf(L"Available camera(s):\n");
-
-			for (int i = 0; i < names.size(); i++)
+			if (names.size() > 0)
 			{
-				_tprintf(L"%d. %s\n", i + 1, names.at(i).c_str());
+				_tprintf(L"Available camera(s):\n");
+
+				for (int i = 0; i < names.size(); i++)
+				{
+					_tprintf(L"%d. %s\n", i + 1, names.at(i).c_str());
+				}
+
+				retcode = names.size();
 			}
 
 			free(pszNames);
@@ -61,5 +67,5 @@ int DispatchFriendlyNames(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContex
 
 	*pCt->m_pCmdSupported = TRUE;
 
-	return NOERROR;
+	return retcode;
 }
