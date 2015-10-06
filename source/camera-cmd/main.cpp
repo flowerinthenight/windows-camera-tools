@@ -39,6 +39,7 @@ using namespace std;
 #include "issyscam.h"
 #include "fnames.h"
 #include "mediainfo.h"
+#include "proppage.h"
 #include "common.h"
 
 #if _DEBUG
@@ -71,6 +72,16 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"            Device Manager -> Imaging devices.\n\n");
 	_tprintf(L"        Example:\n\n");
 	_tprintf(L"        camera-cmd.exe mediainfo -fname:Integrated Camera\n\n");
+	_tprintf(L"    proppage\n\n");
+	_tprintf(L"        Opens the driver-provided (if any) extended property page(s).\n\n");
+	_tprintf(L"        Supported parameters:\n\n");
+	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
+	_tprintf(L"        camera_friendly_name\n\n");
+	_tprintf(L"            Friendly name of the camera device/driver. You can use\n");
+	_tprintf(L"            the 'fnames' parameter for the friendly name(s) or see\n");
+	_tprintf(L"            Device Manager -> Imaging devices.\n\n");
+	_tprintf(L"        Example:\n\n");
+	_tprintf(L"        camera-cmd.exe proppage -fname:Integrated Camera\n\n");
 	_tprintf(L"    issyscam\n\n");
 	_tprintf(L"        Returns the index of the camera friendly name being queried.\n");
 	_tprintf(L"        Returns -1 on failure, or when the camera is not found.\n\n");
@@ -125,34 +136,16 @@ int Junk(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 {
 	CContext *pCt = (CContext*)pContext;
 
-	ICameraMf *pCamMf = NULL;
+	ICameraDs *pCamDs = NULL;
 	HRESULT hr = E_FAIL;
 
-	hr = CreateCameraMfInstance(&pCamMf);
+	hr = CreateCameraDsInstance(&pCamDs);
 
-	if (SUCCEEDED(hr) && pCamMf)
+	if (SUCCEEDED(hr) && pCamDs)
 	{
-		MFMEDIA_INFO *pInfo = NULL;
-		LONG lCount = 0;
-
-		hr = pCamMf->MfGetMediaInfo(L"Integrated Camera", &pInfo, &lCount);
-
-		if (lCount > 0 && pInfo)
-		{
-			for (int i = 0; i < lCount; i++)
-			{
-				_tprintf(L"Index: %d\n", pInfo[i].lIndex);
-				_tprintf(L"Subtype: %s\n", pInfo[i].szSubtype);
-				_tprintf(L"Resolution: %dx%d\n", pInfo[i].lResolutionX, pInfo[i].lResolutionY);
-				_tprintf(L"Frame Rate: %d:%d\n", pInfo[i].lFrameRateNumerator, pInfo[i].lFrameRateDenominator);
-				_tprintf(L"Pixel Aspect Ratio: %d:%d\n", pInfo[i].lPxAspectRatioNumerator, pInfo[i].lPxAspectRatioDenominator);
-				_tprintf(L"Image Stride: %d\n\n", pInfo[i].lStride);
-			}
-
-			free(pInfo);
-		}
-
-		pCamMf->Release();
+		hr = pCamDs->Initialize(L"Integrated Camera");
+		hr = pCamDs->LaunchPropertiesFrame();
+		pCamDs->Release();
 	}
 
 	*pCt->m_pCmdSupported = TRUE;
@@ -168,6 +161,7 @@ static ARG_DISPATCH_TABLE pdt[] = {
 	{ L"flash", DispatchFlash },
 	{ L"privacy", DispatchPrivacy },
 	{ L"issyscam", DispatchIsSystemCamera },
+	{ L"proppage", DispatchPropertyPage },
 };
 
 //
