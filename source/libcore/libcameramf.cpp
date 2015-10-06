@@ -600,7 +600,7 @@ public:
 	}
 
 	//
-	// Param 'ppFriendlyNames' will be allocated here based on the required size. Caller should call free on 'ppFriendlyNames'
+	// Param 'ppFriendlyNames' will be allocated here based on the required size. Caller should call free() on 'ppFriendlyNames'
 	// after call. If more than one cameras detected, names will be separated by a semicolon (;).
 	//
 	HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize)
@@ -1170,7 +1170,6 @@ public:
 							UINT32 uParNume, uParDeno;
 							UINT uiWidth, uiHeight;
 							LONG lDefaultStride;
-							MFRatio mfrAspectRatio;
 
 							MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiWidth, &uiHeight);
 							MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
@@ -1210,6 +1209,297 @@ public:
 				if (pSource) pSource->Shutdown();
 				SafeRelease(&pSource);
 
+				SafeRelease(&pAttributes);
+				SafeRelease(&pType);
+				SafeRelease(&pOutType);
+			}
+		}
+		while (false);
+
+		SafeRelease(&pAttributes);
+
+		for (DWORD i = 0; i < param.count; i++)
+		{
+			SafeRelease(&param.ppDevices[i]);
+		}
+
+		CoTaskMemFree(param.ppDevices);
+
+		hr = MFShutdown();
+
+		if (FAILED(hr))
+		{
+			EventWriteHresultError(M, FL, FN, L"MFShutdown", hr);
+		}
+
+		return hr;
+	}
+
+	//
+	// Param 'ppInfo' will be allocated here based on the required size. Caller should call free() on 'ppInfo'
+	// after call when '*pCount' > 0. 'pCount' will contain the number of MFMEDIA_INFO's allocated.
+	//
+	HRESULT MfGetMediaInfo(wchar_t *pszFriendlyName, MFMEDIA_INFO **ppInfo, LONG *pCount)
+	{
+		HRESULT hr = MFStartup(MF_VERSION);
+
+		if (FAILED(hr))
+		{
+			EventWriteHresultError(M, FL, FN, L"MFStartup", hr);
+			return hr;
+		}
+
+		ChooseDeviceParam param = { 0 };
+		IMFAttributes *pAttributes = NULL;
+		BOOL bCamPresent = FALSE;
+		BOOL bReturn = FALSE;
+		DWORD dwDevIndex = -1;
+		wchar_t szTrace[MAX_PATH] = { 0 };
+		vector<MFMEDIA_INFO> infolist;
+
+		do
+		{
+			*pCount = 0;
+
+			//
+			// Initialize an attribute store to specify enumeration parameters.
+			//
+			hr = MFCreateAttributes(&pAttributes, 1);
+
+			if (FAILED(hr))
+			{
+				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+				break;
+			}
+
+			//
+			// Ask for source type = video capture devices.
+			//
+			hr = pAttributes->SetGUID(
+				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+
+			if (FAILED(hr))
+			{
+				EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);
+				break;
+			}
+
+			//
+			// Enumerate devices.
+			//
+			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
+
+			if (FAILED(hr))
+			{
+				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+				break;
+			}
+
+			if (param.count)
+			{
+				for (DWORD i = 0; i < param.count; i++)
+				{
+					wchar_t *pszName = NULL;
+
+#pragma warning(suppress: 6387)
+					hr = param.ppDevices[i]->GetAllocatedString(
+						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+						&pszName,
+						NULL);
+
+					if (FAILED(hr) || !pszName) break;
+
+					if ((_wcsicmp(pszName, pszFriendlyName)) == 0)
+					{
+						CoTaskMemFree(pszName);
+						bCamPresent = TRUE;
+						dwDevIndex = i;
+						break;
+					}
+
+					CoTaskMemFree(pszName);
+				}
+			}
+
+			if (bCamPresent)
+			{
+				//
+				// Enumerate supported resolutions
+				//
+				IMFMediaSource *pSource = NULL;
+				IMFAttributes *pAttrib = NULL;
+				IMFMediaType *pType = NULL;
+				IMFMediaType *pOutType = NULL;
+				IMFActivate *pActivate = param.ppDevices[dwDevIndex];
+				IMFSourceReader *pIReader = NULL;
+				wchar_t *pszSymbolicLink;
+				UINT32 uiSymbolicLinkLen;
+				// UINT ctr1;
+
+				DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
+
+				//
+				// Create the media source for the device...
+				//
+				hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
+
+				if (FAILED(hr))
+				{
+					EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
+					break;
+				}
+
+				//
+				// Get the symbolic link...
+				//
+				hr = pActivate->GetAllocatedString(
+					MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
+					&pszSymbolicLink,
+					&uiSymbolicLinkLen);
+
+				if (FAILED(hr))
+				{
+					EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
+					break;
+				}
+
+				//
+				// Create an attribute store to hold initialization settings...
+				//
+				hr = MFCreateAttributes(&pAttrib, 2);
+
+				if (FAILED(hr))
+				{
+					EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+					break;
+				}
+
+				hr = pAttrib->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+
+				if (FAILED(hr))
+				{
+					EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);
+					break;
+				}
+
+				//
+				// Then create the source reader...
+				//
+				hr = MFCreateSourceReaderFromMediaSource(pSource, pAttrib, &pIReader);
+
+				if (FAILED(hr))
+				{
+					EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);
+					break;
+				}
+
+				//
+				// Try to find a suitable output type...
+				//
+				BOOL bFound = FALSE;
+
+				for (UINT ctr1 = 0;; ctr1++)
+				{
+					hr = pIReader->GetNativeMediaType(dwStream, ctr1, &pType);
+
+					if (FAILED(hr))
+					{
+						EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
+						break;
+					}
+
+					GUID subType = { 0 };
+
+					hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+					//
+					// Check if its in our table of supported types...
+					//
+					for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
+					{
+						if (subType == FormatConversions[k].guidSubType)
+						{
+							UINT32 uFrNume, uFrDeno;
+							UINT32 uParNume, uParDeno;
+							UINT uiWidth, uiHeight;
+							LONG lDefaultStride;
+
+							MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiWidth, &uiHeight);
+							MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
+							MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
+							hr = GetDefaultImageStride(pType, &lDefaultStride);
+
+							MFMEDIA_INFO mi;
+
+							StringCchPrintf(mi.szSubtype, MAX_PATH, L"%s", FormatConversions[k].pwszGuidSubType);
+							mi.lIndex = ctr1;
+							mi.subTypeGuid = subType;
+							mi.lResolutionX = uiWidth;
+							mi.lResolutionY = uiHeight;
+							mi.lFrameRateNumerator = uFrNume;
+							mi.lFrameRateDenominator = uFrDeno;
+							mi.lPxAspectRatioNumerator = uParNume;
+							mi.lPxAspectRatioDenominator = uParDeno;
+							mi.lStride = lDefaultStride;
+
+							infolist.push_back(mi);
+
+							StringCchPrintf(
+								szTrace,
+								MAX_PATH,
+								L"%s, W: %d, H: %d, Stride: %d, F.Rate: "
+								L"%d:%d, PAR: %d:%d",
+								FormatConversions[k].pwszGuidSubType,
+								uiWidth,
+								uiHeight,
+								lDefaultStride,
+								uFrNume,
+								uFrDeno,
+								uParNume,
+								uParDeno);
+
+							EventWriteInfoW(M, FL, FN, szTrace);
+						}
+					}
+
+					SafeRelease(&pType);
+
+					if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
+				}
+
+				if (hr == MF_E_NO_MORE_TYPES) hr = S_OK;
+
+				if (infolist.size() > 0)
+				{
+					*ppInfo = (MFMEDIA_INFO*)malloc(infolist.size() * sizeof(MFMEDIA_INFO));
+
+					if (*ppInfo)
+					{
+						*pCount = infolist.size();
+
+						MFMEDIA_INFO *pInfoTmp = *ppInfo;
+
+						for (int i = 0; i < infolist.size(); i++)
+						{
+							MFMEDIA_INFO infoItem = infolist.at(i);
+							CopyMemory(pInfoTmp, &infoItem, sizeof(MFMEDIA_INFO));
+							pInfoTmp++;
+						}
+					}
+				}
+
+				SafeRelease(&pActivate);
+				SafeRelease(&pIReader);
+
+				CoTaskMemFree(pszSymbolicLink);
+
+				if (pSource)
+				{
+					pSource->Shutdown();
+				}
+
+				SafeRelease(&pSource);
 				SafeRelease(&pAttributes);
 				SafeRelease(&pType);
 				SafeRelease(&pOutType);

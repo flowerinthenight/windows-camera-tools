@@ -86,6 +86,7 @@
     <ClInclude Include="flash.h" />
     <ClInclude Include="fnames.h" />
     <ClInclude Include="issyscam.h" />
+    <ClInclude Include="mediainfo.h" />
     <ClInclude Include="privacy.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -96,6 +97,7 @@
     <ClCompile Include="fnames.cpp" />
     <ClCompile Include="issyscam.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mediainfo.cpp" />
     <ClCompile Include="privacy.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -38,6 +38,7 @@ using namespace std;
 #include "privacy.h"
 #include "issyscam.h"
 #include "fnames.h"
+#include "mediainfo.h"
 #include "common.h"
 
 #if _DEBUG
@@ -59,6 +60,17 @@ int Help(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	_tprintf(L"        Lists the available/attached camera(s) in the system. Returns\n");
 	_tprintf(L"        the number of available camera(s) found if any, otherwise,\n");
 	_tprintf(L"        returns -1.\n\n");
+	_tprintf(L"    mediainfo\n\n");
+	_tprintf(L"        Lists media-related information of the provided camera name.\n");
+	_tprintf(L"        Returns the number of information structures retrieved.\n\n");
+	_tprintf(L"        Supported parameters:\n\n");
+	_tprintf(L"        -fname:<camera_friendly_name>\n\n");
+	_tprintf(L"        camera_friendly_name\n\n");
+	_tprintf(L"            Friendly name of the camera device/driver. You can use\n");
+	_tprintf(L"            the 'fnames' parameter for the friendly name(s) or see\n");
+	_tprintf(L"            Device Manager -> Imaging devices.\n\n");
+	_tprintf(L"        Example:\n\n");
+	_tprintf(L"        camera-cmd.exe mediainfo -fname:Integrated Camera\n\n");
 	_tprintf(L"    issyscam\n\n");
 	_tprintf(L"        Returns the index of the camera friendly name being queried.\n");
 	_tprintf(L"        Returns -1 on failure, or when the camera is not found.\n\n");
@@ -120,26 +132,24 @@ int Junk(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 
 	if (SUCCEEDED(hr) && pCamMf)
 	{
-		wchar_t *pszNames = NULL;
-		LONG cbSize = 0;
+		MFMEDIA_INFO *pInfo = NULL;
+		LONG lCount = 0;
 
-		hr = pCamMf->GetFriendlyNames(&pszNames, &cbSize);
+		hr = pCamMf->MfGetMediaInfo(L"Integrated Camera", &pInfo, &lCount);
 
-		if (pszNames)
+		if (lCount > 0 && pInfo)
 		{
-			// _tprintf(L"Names (%d) = %s\n", cbSize, pszNames);
-
-			std::vector<std::wstring> names;
-			std::wstring wstrnames(pszNames);
-
-			split(wstrnames, L';', names);
-
-			for (int i = 0; i < names.size(); i++)
+			for (int i = 0; i < lCount; i++)
 			{
-				_tprintf(L"Name = %s\n", names.at(i).c_str());
+				_tprintf(L"Index: %d\n", pInfo[i].lIndex);
+				_tprintf(L"Subtype: %s\n", pInfo[i].szSubtype);
+				_tprintf(L"Resolution: %dx%d\n", pInfo[i].lResolutionX, pInfo[i].lResolutionY);
+				_tprintf(L"Frame Rate: %d:%d\n", pInfo[i].lFrameRateNumerator, pInfo[i].lFrameRateDenominator);
+				_tprintf(L"Pixel Aspect Ratio: %d:%d\n", pInfo[i].lPxAspectRatioNumerator, pInfo[i].lPxAspectRatioDenominator);
+				_tprintf(L"Image Stride: %d\n\n", pInfo[i].lStride);
 			}
 
-			free(pszNames);
+			free(pInfo);
 		}
 
 		pCamMf->Release();
@@ -154,6 +164,7 @@ static ARG_DISPATCH_TABLE pdt[] = {
 	{ L"junk", Junk },
 	{ L"help", Help },
 	{ L"fnames", DispatchFriendlyNames },
+	{ L"mediainfo", DispatchMediaInfo },
 	{ L"flash", DispatchFlash },
 	{ L"privacy", DispatchPrivacy },
 	{ L"issyscam", DispatchIsSystemCamera },

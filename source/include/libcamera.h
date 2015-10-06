@@ -91,6 +91,19 @@ struct ICameraDs : public IUnknown {
 	virtual HRESULT CloseInterfaces() = 0;
 };
 
+typedef struct __MFMEDIA_INFO {
+	LONG lIndex;
+	GUID subTypeGuid;
+	wchar_t szSubtype[MAX_PATH];
+	LONG lResolutionX;
+	LONG lResolutionY;
+	LONG lStride;
+	LONG lFrameRateNumerator;
+	LONG lFrameRateDenominator;
+	LONG lPxAspectRatioNumerator;
+	LONG lPxAspectRatioDenominator;
+} MFMEDIA_INFO, *PMFMEDIA_INFO;
+
 //
 // Our very simple COM-like wrapper interface for camera access using Media Foundation interfaces.
 //
@@ -101,6 +114,7 @@ struct ICameraMf : public IUnknown {
 	virtual HRESULT StopRenderAsync() = 0;
 	virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex) = 0;
 	virtual HRESULT MfDumpCameraInfo(wchar_t *pszFriendlyName) = 0;
+	virtual HRESULT MfGetMediaInfo(wchar_t *pszFriendlyName, MFMEDIA_INFO **ppInfo, LONG *pCount) = 0;
 };
 
 #ifdef __cplusplus
