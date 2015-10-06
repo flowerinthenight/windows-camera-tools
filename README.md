@@ -1,5 +1,5 @@
 # windows-camera-tools
-A generic command line tool to control camera properties in Windows. The tool's name is `camera-cmd.exe`. You can also view the information below in command line by running `camera-cmd.exe` without parameters.
+A generic command line tool to control camera properties in Windows. The tool's name is `camera-cmd.exe`. You can also view the information below in command line by running `camera-cmd.exe` without arguments.
 
 # Syntax:
 ```
