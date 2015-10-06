@@ -29,7 +29,7 @@ int DispatchMediaInfo(wchar_t *pszParam, wchar_t *pszSubParam, PVOID pContext)
 	CContext *pCt = (CContext*)pContext;
 	ICameraMf *pCamMf = NULL;
 	HRESULT hr = E_FAIL;
-	LONG lCount = 0;
+	LONG lCount = DEFAULT_ERROR /* this is our return value */;
 	wchar_t szFname[MAX_PATH] = { 0 };
 	wstring wstrparam(pszSubParam);
 	size_t fname = wstrparam.find(L"-fname:");

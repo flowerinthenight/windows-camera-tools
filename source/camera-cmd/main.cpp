@@ -171,7 +171,7 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	wchar_t szCtrl[MAX_PATH] = { 0 };
 	wchar_t szParam[MAX_PATH] = { 0 };
-	int retcode = -1;
+	int retcode = DEFAULT_ERROR;
 	BOOL bSupportedCmd = FALSE;
 	HRESULT hr = S_OK;
 
