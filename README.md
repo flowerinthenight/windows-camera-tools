@@ -30,7 +30,9 @@ camera-cmd.exe mediainfo -fname:Integrated Camera
 
 ##### proppage
 
+```
 proppage -fname:<camera_friendly_name>
+```
 
 Opens the driver-provided (if any) extended property page(s). `camera_friendly_name` is the friendly name of the camera device/driver. You can use the `fnames` option to get the available friendly names, or see Device Manager -> Imaging devices.
 
