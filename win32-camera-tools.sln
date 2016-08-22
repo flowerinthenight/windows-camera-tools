@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcore", "libcore\libcore.vcxproj", "{15224FB4-1E37-445C-A9B2-F2EFAB56859E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "include", "include", "{7B49661D-311A-4344-891E-EA3880E5614C}"
+	ProjectSection(SolutionItems) = preProject
+		include\libcamera.h = include\libcamera.h
+		include\libcontextbase.h = include\libcontextbase.h
+		include\libcore.h = include\libcore.h
+		include\sdktrace.h = include\sdktrace.h
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "camera-cmd", "camera-cmd\camera-cmd.vcxproj", "{6344A39D-F427-4E51-8C9C-F5A6A999637B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E} = {15224FB4-1E37-445C-A9B2-F2EFAB56859E}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Debug|x64.ActiveCfg = Debug|x64
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Debug|x64.Build.0 = Debug|x64
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Debug|x86.ActiveCfg = Debug|Win32
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Debug|x86.Build.0 = Debug|Win32
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Release|x64.ActiveCfg = Release|x64
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Release|x64.Build.0 = Release|x64
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Release|x86.ActiveCfg = Release|Win32
+		{15224FB4-1E37-445C-A9B2-F2EFAB56859E}.Release|x86.Build.0 = Release|Win32
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Debug|x64.ActiveCfg = Debug|x64
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Debug|x64.Build.0 = Debug|x64
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Debug|x86.ActiveCfg = Debug|Win32
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Debug|x86.Build.0 = Debug|Win32
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Release|x64.ActiveCfg = Release|x64
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Release|x64.Build.0 = Release|x64
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Release|x86.ActiveCfg = Release|Win32
+		{6344A39D-F427-4E51-8C9C-F5A6A999637B}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

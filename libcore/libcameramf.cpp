@@ -29,7 +29,8 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <Mferror.h>
-#include "..\trace\trace.h"
+#include "..\include\sdktrace.h"
+#include "..\etw\jytrace.h"
 
 #pragma comment(lib,"WtsApi32.lib")
 #pragma comment(lib,"UserEnv.lib")

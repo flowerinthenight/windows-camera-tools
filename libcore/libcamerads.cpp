@@ -28,7 +28,8 @@
 #include <ksproxy.h>
 #include <strsafe.h>
 #include <mfapi.h>
-#include "..\trace\trace.h"
+#include "..\include\sdktrace.h"
+#include "..\etw\jytrace.h"
 
 #pragma comment(lib, "strmiids")
 #pragma comment(lib, "setupapi.lib")

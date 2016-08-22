@@ -215,14 +215,14 @@ Remarks:
 #endif
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 //+
-// Provider WinCameraTools Event Count 24
+// Provider JyTrace Event Count 25
 //+
-EXTERN_C __declspec(selectany) const GUID WinCameraTools = {0x89ec6a1c, 0x04ca, 0x4de6, {0xb1, 0x2d, 0x47, 0x43, 0x96, 0xfd, 0xed, 0xf7}};
+EXTERN_C __declspec(selectany) const GUID ProviderJyTrace = {0x277c604b, 0x1962, 0x47fa, {0x93, 0x07, 0x7c, 0xe0, 0x85, 0x5d, 0xfe, 0xa6}};
 
 //
 // Channel
 //
-#define WinCameraTools_CHANNEL_Application 0x9
+#define ProviderJyTrace_CHANNEL_Application 0x9
 //
 // Keyword
 //
@@ -280,6 +280,8 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR FloatInfo = {0x7b, 0x0, 0x
 #define FloatInfo_value 0x7b
 EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR FloatError = {0x7c, 0x0, 0x0, 0x2, 0x0, 0x0, 0x2};
 #define FloatError_value 0x7c
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR Simple = {0x7d, 0x0, 0x0, 0x5, 0x0, 0x0, 0x2};
+#define Simple_value 0x7d
 
 //
 // Note on Generate Code from Manifest Windows Vista and above
@@ -308,15 +310,17 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR FloatError = {0x7c, 0x0, 0
 // Event Enablement Bits
 //
 
-EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG WinCameraToolsEnableBits[1];
-EXTERN_C __declspec(selectany) const ULONGLONG WinCameraToolsKeywords[3] = {0x1, 0x2, 0x2};
-EXTERN_C __declspec(selectany) const UCHAR WinCameraToolsLevels[3] = {5, 5, 2};
-EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT WinCameraTools_Context = {0, 0, 0, 0, 0, 0, 0, 0, 3, WinCameraToolsEnableBits, WinCameraToolsKeywords, WinCameraToolsLevels};
+EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG JyTraceEnableBits[1];
+EXTERN_C __declspec(selectany) const ULONGLONG JyTraceKeywords[3] = {0x1, 0x2, 0x2};
+EXTERN_C __declspec(selectany) const UCHAR JyTraceLevels[3] = {5, 5, 2};
+EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT ProviderJyTrace_Context = {0, 0, 0, 0, 0, 0, 0, 0, 3, JyTraceEnableBits, JyTraceKeywords, JyTraceLevels};
 
-EXTERN_C __declspec(selectany) REGHANDLE WinCameraToolsHandle = (REGHANDLE)0;
+EXTERN_C __declspec(selectany) REGHANDLE JyTraceHandle = (REGHANDLE)0;
 
 #if !defined(McGenEventRegisterUnregister)
 #define McGenEventRegisterUnregister
+#pragma warning(push)
+#pragma warning(disable:6103)
 DECLSPEC_NOINLINE __inline
 ULONG __stdcall
 McGenEventRegister(
@@ -360,6 +364,7 @@ Remarks:
 
     return Error;
 }
+#pragma warning(pop)
 
 
 DECLSPEC_NOINLINE __inline
@@ -397,351 +402,365 @@ Remarks:
 //
 // Register with ETW Vista +
 //
-#ifndef EventRegisterWinCameraTools
-#define EventRegisterWinCameraTools() McGenEventRegister(&WinCameraTools, McGenControlCallbackV2, &WinCameraTools_Context, &WinCameraToolsHandle) 
+#ifndef EventRegisterJyTrace
+#define EventRegisterJyTrace() McGenEventRegister(&ProviderJyTrace, McGenControlCallbackV2, &ProviderJyTrace_Context, &JyTraceHandle) 
 #endif
 
 //
 // UnRegister with ETW
 //
-#ifndef EventUnregisterWinCameraTools
-#define EventUnregisterWinCameraTools() McGenEventUnregister(&WinCameraToolsHandle) 
+#ifndef EventUnregisterJyTrace
+#define EventUnregisterJyTrace() McGenEventUnregister(&JyTraceHandle) 
 #endif
 
 //
 // Enablement check macro for FunctionEntry
 //
 
-#define EventEnabledFunctionEntry() ((WinCameraToolsEnableBits[0] & 0x00000001) != 0)
+#define EventEnabledFunctionEntry() ((JyTraceEnableBits[0] & 0x00000001) != 0)
 
 //
 // Event Macro for FunctionEntry
 //
 #define EventWriteFunctionEntry(Module, File, Function)\
         EventEnabledFunctionEntry() ?\
-        Template_zss(WinCameraToolsHandle, &FunctionEntry, Module, File, Function)\
+        Template_zss(JyTraceHandle, &FunctionEntry, Module, File, Function)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for FunctionExit
 //
 
-#define EventEnabledFunctionExit() ((WinCameraToolsEnableBits[0] & 0x00000001) != 0)
+#define EventEnabledFunctionExit() ((JyTraceEnableBits[0] & 0x00000001) != 0)
 
 //
 // Event Macro for FunctionExit
 //
 #define EventWriteFunctionExit(Module, File, Function)\
         EventEnabledFunctionExit() ?\
-        Template_zss(WinCameraToolsHandle, &FunctionExit, Module, File, Function)\
+        Template_zss(JyTraceHandle, &FunctionExit, Module, File, Function)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for InfoW
 //
 
-#define EventEnabledInfoW() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledInfoW() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for InfoW
 //
 #define EventWriteInfoW(Module, File, Function, Value)\
         EventEnabledInfoW() ?\
-        Template_zssz(WinCameraToolsHandle, &InfoW, Module, File, Function, Value)\
+        Template_zssz(JyTraceHandle, &InfoW, Module, File, Function, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for ErrorW
 //
 
-#define EventEnabledErrorW() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledErrorW() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for ErrorW
 //
 #define EventWriteErrorW(Module, File, Function, Value)\
         EventEnabledErrorW() ?\
-        Template_zssz(WinCameraToolsHandle, &ErrorW, Module, File, Function, Value)\
+        Template_zssz(JyTraceHandle, &ErrorW, Module, File, Function, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for InfoA
 //
 
-#define EventEnabledInfoA() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledInfoA() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for InfoA
 //
 #define EventWriteInfoA(Module, File, Function, Value)\
         EventEnabledInfoA() ?\
-        Template_zsss(WinCameraToolsHandle, &InfoA, Module, File, Function, Value)\
+        Template_zsss(JyTraceHandle, &InfoA, Module, File, Function, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for ErrorA
 //
 
-#define EventEnabledErrorA() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledErrorA() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for ErrorA
 //
 #define EventWriteErrorA(Module, File, Function, Value)\
         EventEnabledErrorA() ?\
-        Template_zsss(WinCameraToolsHandle, &ErrorA, Module, File, Function, Value)\
+        Template_zsss(JyTraceHandle, &ErrorA, Module, File, Function, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for WideStrInfo
 //
 
-#define EventEnabledWideStrInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledWideStrInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for WideStrInfo
 //
 #define EventWriteWideStrInfo(Module, File, Function, Key, Value)\
         EventEnabledWideStrInfo() ?\
-        Template_zsszz(WinCameraToolsHandle, &WideStrInfo, Module, File, Function, Key, Value)\
+        Template_zsszz(JyTraceHandle, &WideStrInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for WideStrError
 //
 
-#define EventEnabledWideStrError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledWideStrError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for WideStrError
 //
 #define EventWriteWideStrError(Module, File, Function, Key, Value)\
         EventEnabledWideStrError() ?\
-        Template_zsszz(WinCameraToolsHandle, &WideStrError, Module, File, Function, Key, Value)\
+        Template_zsszz(JyTraceHandle, &WideStrError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for AnsiStrInfo
 //
 
-#define EventEnabledAnsiStrInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledAnsiStrInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for AnsiStrInfo
 //
 #define EventWriteAnsiStrInfo(Module, File, Function, Key, Value)\
         EventEnabledAnsiStrInfo() ?\
-        Template_zsszs(WinCameraToolsHandle, &AnsiStrInfo, Module, File, Function, Key, Value)\
+        Template_zsszs(JyTraceHandle, &AnsiStrInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for AnsiStrError
 //
 
-#define EventEnabledAnsiStrError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledAnsiStrError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for AnsiStrError
 //
 #define EventWriteAnsiStrError(Module, File, Function, Key, Value)\
         EventEnabledAnsiStrError() ?\
-        Template_zsszs(WinCameraToolsHandle, &AnsiStrError, Module, File, Function, Key, Value)\
+        Template_zsszs(JyTraceHandle, &AnsiStrError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for HresultError
 //
 
-#define EventEnabledHresultError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledHresultError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for HresultError
 //
 #define EventWriteHresultError(Module, File, Function, Key, Value)\
         EventEnabledHresultError() ?\
-        Template_zsszd(WinCameraToolsHandle, &HresultError, Module, File, Function, Key, Value)\
+        Template_zsszd(JyTraceHandle, &HresultError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for LastError
 //
 
-#define EventEnabledLastError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledLastError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for LastError
 //
 #define EventWriteLastError(Module, File, Function, Key, Value)\
         EventEnabledLastError() ?\
-        Template_zsszq(WinCameraToolsHandle, &LastError, Module, File, Function, Key, Value)\
+        Template_zsszq(JyTraceHandle, &LastError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for PointerInfo
 //
 
-#define EventEnabledPointerInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledPointerInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for PointerInfo
 //
 #define EventWritePointerInfo(Module, File, Function, Key, Value)\
         EventEnabledPointerInfo() ?\
-        Template_zsszp(WinCameraToolsHandle, &PointerInfo, Module, File, Function, Key, Value)\
+        Template_zsszp(JyTraceHandle, &PointerInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for PointerError
 //
 
-#define EventEnabledPointerError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledPointerError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for PointerError
 //
 #define EventWritePointerError(Module, File, Function, Key, Value)\
         EventEnabledPointerError() ?\
-        Template_zsszp(WinCameraToolsHandle, &PointerError, Module, File, Function, Key, Value)\
+        Template_zsszp(JyTraceHandle, &PointerError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for NumberInfo
 //
 
-#define EventEnabledNumberInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledNumberInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for NumberInfo
 //
 #define EventWriteNumberInfo(Module, File, Function, Key, Value)\
         EventEnabledNumberInfo() ?\
-        Template_zsszd(WinCameraToolsHandle, &NumberInfo, Module, File, Function, Key, Value)\
+        Template_zsszd(JyTraceHandle, &NumberInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for NumberError
 //
 
-#define EventEnabledNumberError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledNumberError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for NumberError
 //
 #define EventWriteNumberError(Module, File, Function, Key, Value)\
         EventEnabledNumberError() ?\
-        Template_zsszd(WinCameraToolsHandle, &NumberError, Module, File, Function, Key, Value)\
+        Template_zsszd(JyTraceHandle, &NumberError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for HexInfo
 //
 
-#define EventEnabledHexInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledHexInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for HexInfo
 //
 #define EventWriteHexInfo(Module, File, Function, Key, Value)\
         EventEnabledHexInfo() ?\
-        Template_zsszq(WinCameraToolsHandle, &HexInfo, Module, File, Function, Key, Value)\
+        Template_zsszq(JyTraceHandle, &HexInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for HexError
 //
 
-#define EventEnabledHexError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledHexError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for HexError
 //
 #define EventWriteHexError(Module, File, Function, Key, Value)\
         EventEnabledHexError() ?\
-        Template_zsszq(WinCameraToolsHandle, &HexError, Module, File, Function, Key, Value)\
+        Template_zsszq(JyTraceHandle, &HexError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for BoolInfo
 //
 
-#define EventEnabledBoolInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledBoolInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for BoolInfo
 //
 #define EventWriteBoolInfo(Module, File, Function, Key, Value)\
         EventEnabledBoolInfo() ?\
-        Template_zsszt(WinCameraToolsHandle, &BoolInfo, Module, File, Function, Key, Value)\
+        Template_zsszt(JyTraceHandle, &BoolInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for BoolError
 //
 
-#define EventEnabledBoolError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledBoolError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for BoolError
 //
 #define EventWriteBoolError(Module, File, Function, Key, Value)\
         EventEnabledBoolError() ?\
-        Template_zsszt(WinCameraToolsHandle, &BoolError, Module, File, Function, Key, Value)\
+        Template_zsszt(JyTraceHandle, &BoolError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for GuidInfo
 //
 
-#define EventEnabledGuidInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledGuidInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for GuidInfo
 //
 #define EventWriteGuidInfo(Module, File, Function, Key, Value)\
         EventEnabledGuidInfo() ?\
-        Template_zsszj(WinCameraToolsHandle, &GuidInfo, Module, File, Function, Key, Value)\
+        Template_zsszj(JyTraceHandle, &GuidInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for GuidError
 //
 
-#define EventEnabledGuidError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledGuidError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for GuidError
 //
 #define EventWriteGuidError(Module, File, Function, Key, Value)\
         EventEnabledGuidError() ?\
-        Template_zsszj(WinCameraToolsHandle, &GuidError, Module, File, Function, Key, Value)\
+        Template_zsszj(JyTraceHandle, &GuidError, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for FloatInfo
 //
 
-#define EventEnabledFloatInfo() ((WinCameraToolsEnableBits[0] & 0x00000002) != 0)
+#define EventEnabledFloatInfo() ((JyTraceEnableBits[0] & 0x00000002) != 0)
 
 //
 // Event Macro for FloatInfo
 //
 #define EventWriteFloatInfo(Module, File, Function, Key, Value)\
         EventEnabledFloatInfo() ?\
-        Template_zsszf(WinCameraToolsHandle, &FloatInfo, Module, File, Function, Key, Value)\
+        Template_zsszf(JyTraceHandle, &FloatInfo, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 //
 // Enablement check macro for FloatError
 //
 
-#define EventEnabledFloatError() ((WinCameraToolsEnableBits[0] & 0x00000004) != 0)
+#define EventEnabledFloatError() ((JyTraceEnableBits[0] & 0x00000004) != 0)
 
 //
 // Event Macro for FloatError
 //
 #define EventWriteFloatError(Module, File, Function, Key, Value)\
         EventEnabledFloatError() ?\
-        Template_zsszf(WinCameraToolsHandle, &FloatError, Module, File, Function, Key, Value)\
+        Template_zsszf(JyTraceHandle, &FloatError, Module, File, Function, Key, Value)\
+        : ERROR_SUCCESS\
+
+//
+// Enablement check macro for Simple
+//
+
+#define EventEnabledSimple() ((JyTraceEnableBits[0] & 0x00000002) != 0)
+
+//
+// Event Macro for Simple
+//
+#define EventWriteSimple(Module, File, Function, Key, Value)\
+        EventEnabledSimple() ?\
+        Template_zzzzz(JyTraceHandle, &Simple, Module, File, Function, Key, Value)\
         : ERROR_SUCCESS\
 
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
@@ -1218,6 +1237,51 @@ Template_zsszf(
 }
 #endif
 
+//
+//Template from manifest : TemplateNetSimple
+//
+#ifndef Template_zzzzz_def
+#define Template_zzzzz_def
+ETW_INLINE
+ULONG
+Template_zzzzz(
+    _In_ REGHANDLE RegHandle,
+    _In_ PCEVENT_DESCRIPTOR Descriptor,
+    _In_opt_ PCWSTR  _Arg0,
+    _In_opt_ PCWSTR  _Arg1,
+    _In_opt_ PCWSTR  _Arg2,
+    _In_opt_ PCWSTR  _Arg3,
+    _In_opt_ PCWSTR  _Arg4
+    )
+{
+#define ARGUMENT_COUNT_zzzzz 5
+
+    EVENT_DATA_DESCRIPTOR EventData[ARGUMENT_COUNT_zzzzz];
+
+    EventDataDescCreate(&EventData[0], 
+                        (_Arg0 != NULL) ? _Arg0 : L"NULL",
+                        (_Arg0 != NULL) ? (ULONG)((wcslen(_Arg0) + 1) * sizeof(WCHAR)) : (ULONG)sizeof(L"NULL"));
+
+    EventDataDescCreate(&EventData[1], 
+                        (_Arg1 != NULL) ? _Arg1 : L"NULL",
+                        (_Arg1 != NULL) ? (ULONG)((wcslen(_Arg1) + 1) * sizeof(WCHAR)) : (ULONG)sizeof(L"NULL"));
+
+    EventDataDescCreate(&EventData[2], 
+                        (_Arg2 != NULL) ? _Arg2 : L"NULL",
+                        (_Arg2 != NULL) ? (ULONG)((wcslen(_Arg2) + 1) * sizeof(WCHAR)) : (ULONG)sizeof(L"NULL"));
+
+    EventDataDescCreate(&EventData[3], 
+                        (_Arg3 != NULL) ? _Arg3 : L"NULL",
+                        (_Arg3 != NULL) ? (ULONG)((wcslen(_Arg3) + 1) * sizeof(WCHAR)) : (ULONG)sizeof(L"NULL"));
+
+    EventDataDescCreate(&EventData[4], 
+                        (_Arg4 != NULL) ? _Arg4 : L"NULL",
+                        (_Arg4 != NULL) ? (ULONG)((wcslen(_Arg4) + 1) * sizeof(WCHAR)) : (ULONG)sizeof(L"NULL"));
+
+    return EventWrite(RegHandle, Descriptor, ARGUMENT_COUNT_zzzzz, EventData);
+}
+#endif
+
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 #if defined(__cplusplus)
@@ -1227,20 +1291,21 @@ Template_zsszf(
 #define MSG_level_Error                      0x50000002L
 #define MSG_level_Verbose                    0x50000005L
 #define MSG_channel_Application              0x90000001L
-#define MSG_wincameratools_event_101_message 0xB0000065L
-#define MSG_wincameratools_event_102_message 0xB0000066L
-#define MSG_wincameratools_event_119_message 0xB0000067L
-#define MSG_wincameratools_event_120_message 0xB0000068L
-#define MSG_wincameratools_event_121_message 0xB0000069L
-#define MSG_wincameratools_event_122_message 0xB000006AL
-#define MSG_wincameratools_event_103_message 0xB000006BL
-#define MSG_wincameratools_event_104_message 0xB000006DL
-#define MSG_wincameratools_event_105_message 0xB000006FL
-#define MSG_wincameratools_event_106_message 0xB0000070L
-#define MSG_wincameratools_event_107_message 0xB0000071L
-#define MSG_wincameratools_event_110_message 0xB0000073L
-#define MSG_wincameratools_event_111_message 0xB0000075L
-#define MSG_wincameratools_event_112_message 0xB0000077L
-#define MSG_wincameratools_event_113_message 0xB0000079L
-#define MSG_wincameratools_event_123_message 0xB000007BL
-#define MSG_wincameratools_event_124_message 0xB000007CL
+#define MSG_jenkins_event_101_message        0xB0000065L
+#define MSG_jenkins_event_102_message        0xB0000066L
+#define MSG_jenkins_event_119_message        0xB0000067L
+#define MSG_jenkins_event_120_message        0xB0000068L
+#define MSG_jenkins_event_121_message        0xB0000069L
+#define MSG_jenkins_event_122_message        0xB000006AL
+#define MSG_jenkins_event_103_message        0xB000006BL
+#define MSG_jenkins_event_104_message        0xB000006DL
+#define MSG_jenkins_event_105_message        0xB000006FL
+#define MSG_jenkins_event_106_message        0xB0000070L
+#define MSG_jenkins_event_107_message        0xB0000071L
+#define MSG_jenkins_event_110_message        0xB0000073L
+#define MSG_jenkins_event_111_message        0xB0000075L
+#define MSG_jenkins_event_112_message        0xB0000077L
+#define MSG_jenkins_event_113_message        0xB0000079L
+#define MSG_jenkins_event_123_message        0xB000007BL
+#define MSG_jenkins_event_124_message        0xB000007CL
+#define MSG_JyTrace_event_125_message        0xB000007DL
