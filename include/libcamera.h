@@ -29,92 +29,92 @@ struct __declspec(uuid("91B64872-05C4-405F-9266-B7AAFF000A35")) ICameraDs;
 struct __declspec(uuid("5B57A953-D677-4073-B64B-78BD270E56CB")) ICameraMf;
 struct __declspec(uuid("9ADA3F32-E5F5-415E-A120-2AB0AAA700C0")) IWebcamWrapper;
 
-typedef HRESULT (CALLBACK *FrameCallback)(HRESULT hrStatus,
-	DWORD dwStreamIndex,
-	DWORD dwStreamFlags,
-	LONGLONG llTimestamp,
-	IMFSample *pSample
-);
+typedef HRESULT(CALLBACK *FrameCallback)(HRESULT hrStatus,
+    DWORD dwStreamIndex,
+    DWORD dwStreamFlags,
+    LONGLONG llTimestamp,
+    IMFSample *pSample
+    );
 
 typedef enum {
-	CameraFlashOff = 0,
-	CameraFlashOn,
-	CameraFlashAuto,
-	CameraFlashCheckCount,
+    CameraFlashOff = 0,
+    CameraFlashOn,
+    CameraFlashAuto,
+    CameraFlashCheckCount,
 } CameraFlashEnum;
 
 struct IBufferLock : public IUnknown {
-	virtual HRESULT LockBuffer(LONG lDefaultStride, DWORD dwHeightInPixels, BYTE **ppbScanLine0, LONG *plStride) = 0;
-	virtual void UnlockBuffer() = 0;
+    virtual HRESULT LockBuffer(LONG lDefaultStride, DWORD dwHeightInPixels, BYTE **ppbScanLine0, LONG *plStride) = 0;
+    virtual void UnlockBuffer() = 0;
 };
 
 //
 // Our very simple COM-like wrapper interface for camera access using DirectShow interfaces.
 //
 struct ICameraDs : public IUnknown {
-	virtual HRESULT Initialize(wchar_t *pszFriendlyName) = 0;
-	virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSysCam, wchar_t *pszDevPath, DWORD cchDevPathSize) = 0;
-	virtual HRESULT SetPrivacy(LONG lNewValue) = 0;
-	virtual HRESULT GetPrivacy(LONG *plValue, LONG *plFlags) = 0;
-	virtual HRESULT SetBrightness(LONG lNewValue) = 0;
-	virtual HRESULT GetBrightness(LONG *plValue, LONG *plFlags) = 0;
-	virtual HRESULT SetContrast(LONG lNewValue) = 0;
-	virtual HRESULT GetContrast(LONG *plValue, LONG *plFlags) = 0;
-	virtual HRESULT SetSaturation(LONG lNewValue) = 0;
-	virtual HRESULT GetSaturation(LONG *plValue, LONG *plFlags) = 0;
-	virtual HRESULT SetExposure(LONG lNewValue) = 0;
-	virtual HRESULT GetExposure(LONG *plValue, LONG *plFlags) = 0;
-	virtual HRESULT SetFlash(CameraFlashEnum newValue) = 0;
-	virtual HRESULT GetFlash(CameraFlashEnum *pValue, LONG *plFlags) = 0;
-	virtual HRESULT GetBrightnessRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
-	virtual HRESULT GetContrastRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
-	virtual HRESULT GetSaturationRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
-	virtual HRESULT GetExposureRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
-	virtual HRESULT GetCameraProvider(wchar_t *pszFriendlyName, wchar_t *pszProvider, DWORD cchProvSize) = 0;
-	virtual HRESULT DumpCameraInfo(wchar_t *pszFriendlyName) = 0;
-	virtual HRESULT LaunchPropertiesFrame() = 0;
-	virtual HRESULT CloseInterfaces() = 0;
+    virtual HRESULT Initialize(wchar_t *pszFriendlyName) = 0;
+    virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSysCam, wchar_t *pszDevPath, DWORD cchDevPathSize) = 0;
+    virtual HRESULT SetPrivacy(LONG lNewValue) = 0;
+    virtual HRESULT GetPrivacy(LONG *plValue, LONG *plFlags) = 0;
+    virtual HRESULT SetBrightness(LONG lNewValue) = 0;
+    virtual HRESULT GetBrightness(LONG *plValue, LONG *plFlags) = 0;
+    virtual HRESULT SetContrast(LONG lNewValue) = 0;
+    virtual HRESULT GetContrast(LONG *plValue, LONG *plFlags) = 0;
+    virtual HRESULT SetSaturation(LONG lNewValue) = 0;
+    virtual HRESULT GetSaturation(LONG *plValue, LONG *plFlags) = 0;
+    virtual HRESULT SetExposure(LONG lNewValue) = 0;
+    virtual HRESULT GetExposure(LONG *plValue, LONG *plFlags) = 0;
+    virtual HRESULT SetFlash(CameraFlashEnum newValue) = 0;
+    virtual HRESULT GetFlash(CameraFlashEnum *pValue, LONG *plFlags) = 0;
+    virtual HRESULT GetBrightnessRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
+    virtual HRESULT GetContrastRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
+    virtual HRESULT GetSaturationRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
+    virtual HRESULT GetExposureRange(LONG *plMin, LONG *plMax, LONG *plDelta, LONG *plDefault, LONG *plCaps) = 0;
+    virtual HRESULT GetCameraProvider(wchar_t *pszFriendlyName, wchar_t *pszProvider, DWORD cchProvSize) = 0;
+    virtual HRESULT DumpCameraInfo(wchar_t *pszFriendlyName) = 0;
+    virtual HRESULT LaunchPropertiesFrame() = 0;
+    virtual HRESULT CloseInterfaces() = 0;
 };
 
 typedef struct __MFMEDIA_INFO {
-	LONG lIndex;
-	GUID subTypeGuid;
-	wchar_t szSubtype[MAX_PATH];
-	LONG lResolutionX;
-	LONG lResolutionY;
-	LONG lStride;
-	LONG lFrameRateNumerator;
-	LONG lFrameRateDenominator;
-	LONG lPxAspectRatioNumerator;
-	LONG lPxAspectRatioDenominator;
+    LONG lIndex;
+    GUID subTypeGuid;
+    wchar_t szSubtype[MAX_PATH];
+    LONG lResolutionX;
+    LONG lResolutionY;
+    LONG lStride;
+    LONG lFrameRateNumerator;
+    LONG lFrameRateDenominator;
+    LONG lPxAspectRatioNumerator;
+    LONG lPxAspectRatioDenominator;
 } MFMEDIA_INFO, *PMFMEDIA_INFO;
 
 //
 // Our very simple COM-like wrapper interface for camera access using Media Foundation interfaces.
 //
 struct ICameraMf : public IUnknown {
-	virtual HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnFrameCallback) = 0;
-	virtual HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize) = 0;
-	virtual HRESULT StartRenderAsync(wchar_t *pszFriendlyName) = 0;
-	virtual HRESULT StopRenderAsync() = 0;
-	virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex) = 0;
-	virtual HRESULT MfDumpCameraInfo(wchar_t *pszFriendlyName) = 0;
-	virtual HRESULT MfGetMediaInfo(wchar_t *pszFriendlyName, MFMEDIA_INFO **ppInfo, LONG *pCount) = 0;
+    virtual HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnFrameCallback) = 0;
+    virtual HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize) = 0;
+    virtual HRESULT StartRenderAsync(wchar_t *pszFriendlyName) = 0;
+    virtual HRESULT StopRenderAsync() = 0;
+    virtual HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex) = 0;
+    virtual HRESULT MfDumpCameraInfo(wchar_t *pszFriendlyName) = 0;
+    virtual HRESULT MfGetMediaInfo(wchar_t *pszFriendlyName, MFMEDIA_INFO **ppInfo, LONG *pCount) = 0;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-	_declspec(dllexport) HRESULT GetDefaultImageStride(IMFMediaType *pType, LONG *plStride);
+    _declspec(dllexport) HRESULT GetDefaultImageStride(IMFMediaType *pType, LONG *plStride);
 
-	//
-	// Factory functions.
-	//
-	_declspec(dllexport) HRESULT CreateBufferLockInstance(IMFMediaBuffer *pBuffer, IBufferLock **ppObj);
-	_declspec(dllexport) HRESULT CreateCameraDsInstance(ICameraDs **ppObj);
-	_declspec(dllexport) HRESULT CreateCameraMfInstance(ICameraMf **ppObj);
-	_declspec(dllexport) HRESULT CreateWebcamWrapperInstance(IWebcamWrapper **ppObj);
+    //
+    // Factory functions.
+    //
+    _declspec(dllexport) HRESULT CreateBufferLockInstance(IMFMediaBuffer *pBuffer, IBufferLock **ppObj);
+    _declspec(dllexport) HRESULT CreateCameraDsInstance(ICameraDs **ppObj);
+    _declspec(dllexport) HRESULT CreateCameraMfInstance(ICameraMf **ppObj);
+    _declspec(dllexport) HRESULT CreateWebcamWrapperInstance(IWebcamWrapper **ppObj);
 
 #ifdef __cplusplus
 }

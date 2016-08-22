@@ -9,16 +9,16 @@
 
 class Context {
 public:
-	Context()
-	{
-		InitializeCriticalSection(&m_csLock);
-	}
+    Context()
+    {
+        InitializeCriticalSection(&m_csLock);
+    }
 
-	~Context()
-	{
-		DeleteCriticalSection(&m_csLock);
-	}
+    ~Context()
+    {
+        DeleteCriticalSection(&m_csLock);
+    }
 
 public:
-	CRITICAL_SECTION m_csLock;
+    CRITICAL_SECTION m_csLock;
 };

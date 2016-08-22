@@ -27,1499 +27,1493 @@
 
 _declspec(dllexport) HRESULT GetDefaultImageStride(IMFMediaType *pType, LONG *plStride)
 {
-	LONG lStride = 0;
+    LONG lStride = 0;
 
-	//
-	// Try to get the default stride from the media type.
-	//
-	HRESULT hr = pType->GetUINT32(MF_MT_DEFAULT_STRIDE, (UINT32*)&lStride);
+    //
+    // Try to get the default stride from the media type.
+    //
+    HRESULT hr = pType->GetUINT32(MF_MT_DEFAULT_STRIDE, (UINT32*)&lStride);
 
-	if (FAILED(hr))
-	{
-		GUID subType = GUID_NULL;
-		UINT32 width = 0;
-		UINT32 height = 0;
+    if (FAILED(hr))
+    {
+        GUID subType = GUID_NULL;
+        UINT32 width = 0;
+        UINT32 height = 0;
 
-		//
-		// Get the subtype and the image size.
-		//
-		hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
-		if (SUCCEEDED(hr)) hr = MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &width, &height);
-		if (SUCCEEDED(hr)) hr = MFGetStrideForBitmapInfoHeader(subType.Data1, width, &lStride);
+        //
+        // Get the subtype and the image size.
+        //
+        hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+        if (SUCCEEDED(hr)) hr = MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &width, &height);
+        if (SUCCEEDED(hr)) hr = MFGetStrideForBitmapInfoHeader(subType.Data1, width, &lStride);
 
-		//
-		// Set the attribute for later reference.
-		//
-		if (SUCCEEDED(hr)) (void)pType->SetUINT32(MF_MT_DEFAULT_STRIDE, UINT32(lStride));
-	}
+        //
+        // Set the attribute for later reference.
+        //
+        if (SUCCEEDED(hr)) (void)pType->SetUINT32(MF_MT_DEFAULT_STRIDE, UINT32(lStride));
+    }
 
-	if (SUCCEEDED(hr)) *plStride = lStride;
+    if (SUCCEEDED(hr)) *plStride = lStride;
 
-	return hr;
+    return hr;
 }
 
 typedef HRESULT(*COPY_TRANSFORM_FN)(BYTE*, LONG, BYTE*, LONG, UINT, UINT);
 
 struct ChooseDeviceParam {
-	IMFActivate **ppDevices;		// Array of IMFActivate pointers.
-	UINT32 count;					// Number of elements in the array.
-	UINT32 selection;				// Selected device, by array index.
+    IMFActivate **ppDevices;		// Array of IMFActivate pointers.
+    UINT32 count;					// Number of elements in the array.
+    UINT32 selection;				// Selected device, by array index.
 };
 
 struct ConversionFunction {
-	BOOL bSelect;
-	GUID guidSubType;
-	LPCWSTR pwszGuidSubType;
-	COPY_TRANSFORM_FN FnCopyTransform;
+    BOOL bSelect;
+    GUID guidSubType;
+    LPCWSTR pwszGuidSubType;
+    COPY_TRANSFORM_FN FnCopyTransform;
 };
 
 ConversionFunction FormatConversions[] = {
-	/* Uncompressed RGB formats */
-	{ FALSE, MFVideoFormat_RGB8, L"MFVideoFormat_RGB8", NULL },
-	{ FALSE, MFVideoFormat_RGB555, L"MFVideoFormat_RGB555", NULL },
-	{ FALSE, MFVideoFormat_RGB565, L"MFVideoFormat_RGB565", NULL },
-	{ FALSE, MFVideoFormat_RGB32, L"MFVideoFormat_RGB32", NULL },
-	{ FALSE, MFVideoFormat_RGB24, L"MFVideoFormat_RGB24", NULL },
-	{ FALSE, MFVideoFormat_ARGB32, L"MFVideoFormat_ARGB32", NULL },
-	/* YUV Formats: 8-Bit and Palettized */
-	{ FALSE, MFVideoFormat_AI44, L"MFVideoFormat_AI44", NULL },
-	{ FALSE, MFVideoFormat_AYUV, L"MFVideoFormat_AYUV", NULL },
-	{ FALSE, MFVideoFormat_I420, L"MFVideoFormat_I420", NULL },
-	{ FALSE, MFVideoFormat_IYUV, L"MFVideoFormat_IYUV", NULL },
-	{ FALSE, MFVideoFormat_NV11, L"MFVideoFormat_NV11", NULL },
-	{ FALSE, MFVideoFormat_NV12, L"MFVideoFormat_NV12", NULL },
-	{ FALSE, MFVideoFormat_UYVY, L"MFVideoFormat_UYVY", NULL },
-	{ FALSE, MFVideoFormat_Y41P, L"MFVideoFormat_Y41P", NULL },
-	{ FALSE, MFVideoFormat_Y41T, L"MFVideoFormat_Y41T", NULL },
-	{ FALSE, MFVideoFormat_Y42T, L"MFVideoFormat_Y42T", NULL },
-	{ FALSE, MFVideoFormat_YUY2, L"MFVideoFormat_YUY2", NULL /*FnCopyYUY2ToRGB32*/ },
-	{ FALSE, MFVideoFormat_YV12, L"MFVideoFormat_YV12", NULL },
-	/* YUV Formats: 10-Bit and 16-Bit */
-	{ FALSE, MFVideoFormat_P010, L"MFVideoFormat_P010", NULL },
-	{ FALSE, MFVideoFormat_P016, L"MFVideoFormat_P016", NULL },
-	{ FALSE, MFVideoFormat_P210, L"MFVideoFormat_P210", NULL },
-	{ FALSE, MFVideoFormat_P216, L"MFVideoFormat_P216", NULL },
-	{ FALSE, MFVideoFormat_v210, L"MFVideoFormat_v210", NULL },
-	{ FALSE, MFVideoFormat_v216, L"MFVideoFormat_v216", NULL },
-	{ FALSE, MFVideoFormat_v410, L"MFVideoFormat_v410", NULL },
-	{ FALSE, MFVideoFormat_Y210, L"MFVideoFormat_Y210", NULL },
-	{ FALSE, MFVideoFormat_Y216, L"MFVideoFormat_Y216", NULL },
-	{ FALSE, MFVideoFormat_Y410, L"MFVideoFormat_Y410", NULL },
-	{ FALSE, MFVideoFormat_Y416, L"MFVideoFormat_Y416", NULL },
-	/* Encoded Video Types */
-	{ FALSE, MFVideoFormat_DV25, L"MFVideoFormat_DV25", NULL },
-	{ FALSE, MFVideoFormat_DV50, L"MFVideoFormat_DV50", NULL },
-	{ FALSE, MFVideoFormat_DVC, L"MFVideoFormat_DVC", NULL },
-	{ FALSE, MFVideoFormat_DVH1, L"MFVideoFormat_DVH1", NULL },
-	{ FALSE, MFVideoFormat_DVHD, L"MFVideoFormat_DVHD", NULL },
-	{ FALSE, MFVideoFormat_DVSD, L"MFVideoFormat_DVSD", NULL },
-	{ FALSE, MFVideoFormat_DVSL, L"MFVideoFormat_DVSL", NULL },
-	{ FALSE, MFVideoFormat_H264, L"MFVideoFormat_H264", NULL },
-	{ FALSE, MFVideoFormat_M4S2, L"MFVideoFormat_M4S2", NULL },
-	{ FALSE, MFVideoFormat_MJPG, L"MFVideoFormat_MJPG", NULL },
-	{ FALSE, MFVideoFormat_MP43, L"MFVideoFormat_MP43", NULL },
-	{ FALSE, MFVideoFormat_MP4S, L"MFVideoFormat_MP4S", NULL },
-	{ FALSE, MFVideoFormat_MP4V, L"MFVideoFormat_MP4V", NULL },
-	{ FALSE, MFVideoFormat_MPEG2, L"MFVideoFormat_MPEG2", NULL },
-	{ FALSE, MFVideoFormat_MPG1, L"MFVideoFormat_MPG1", NULL },
-	{ FALSE, MFVideoFormat_MSS1, L"MFVideoFormat_MSS1", NULL },
-	{ FALSE, MFVideoFormat_MSS2, L"MFVideoFormat_MSS2", NULL },
-	{ FALSE, MFVideoFormat_WMV1, L"MFVideoFormat_WMV1", NULL },
-	{ FALSE, MFVideoFormat_WMV2, L"MFVideoFormat_WMV2", NULL },
-	{ FALSE, MFVideoFormat_WMV3, L"MFVideoFormat_WMV3", NULL },
-	{ FALSE, MFVideoFormat_WVC1, L"MFVideoFormat_WVC1", NULL },
+    /* Uncompressed RGB formats */
+    { FALSE, MFVideoFormat_RGB8, L"MFVideoFormat_RGB8", NULL },
+    { FALSE, MFVideoFormat_RGB555, L"MFVideoFormat_RGB555", NULL },
+    { FALSE, MFVideoFormat_RGB565, L"MFVideoFormat_RGB565", NULL },
+    { FALSE, MFVideoFormat_RGB32, L"MFVideoFormat_RGB32", NULL },
+    { FALSE, MFVideoFormat_RGB24, L"MFVideoFormat_RGB24", NULL },
+    { FALSE, MFVideoFormat_ARGB32, L"MFVideoFormat_ARGB32", NULL },
+    /* YUV Formats: 8-Bit and Palettized */
+    { FALSE, MFVideoFormat_AI44, L"MFVideoFormat_AI44", NULL },
+    { FALSE, MFVideoFormat_AYUV, L"MFVideoFormat_AYUV", NULL },
+    { FALSE, MFVideoFormat_I420, L"MFVideoFormat_I420", NULL },
+    { FALSE, MFVideoFormat_IYUV, L"MFVideoFormat_IYUV", NULL },
+    { FALSE, MFVideoFormat_NV11, L"MFVideoFormat_NV11", NULL },
+    { FALSE, MFVideoFormat_NV12, L"MFVideoFormat_NV12", NULL },
+    { FALSE, MFVideoFormat_UYVY, L"MFVideoFormat_UYVY", NULL },
+    { FALSE, MFVideoFormat_Y41P, L"MFVideoFormat_Y41P", NULL },
+    { FALSE, MFVideoFormat_Y41T, L"MFVideoFormat_Y41T", NULL },
+    { FALSE, MFVideoFormat_Y42T, L"MFVideoFormat_Y42T", NULL },
+    { FALSE, MFVideoFormat_YUY2, L"MFVideoFormat_YUY2", NULL /*FnCopyYUY2ToRGB32*/ },
+    { FALSE, MFVideoFormat_YV12, L"MFVideoFormat_YV12", NULL },
+    /* YUV Formats: 10-Bit and 16-Bit */
+    { FALSE, MFVideoFormat_P010, L"MFVideoFormat_P010", NULL },
+    { FALSE, MFVideoFormat_P016, L"MFVideoFormat_P016", NULL },
+    { FALSE, MFVideoFormat_P210, L"MFVideoFormat_P210", NULL },
+    { FALSE, MFVideoFormat_P216, L"MFVideoFormat_P216", NULL },
+    { FALSE, MFVideoFormat_v210, L"MFVideoFormat_v210", NULL },
+    { FALSE, MFVideoFormat_v216, L"MFVideoFormat_v216", NULL },
+    { FALSE, MFVideoFormat_v410, L"MFVideoFormat_v410", NULL },
+    { FALSE, MFVideoFormat_Y210, L"MFVideoFormat_Y210", NULL },
+    { FALSE, MFVideoFormat_Y216, L"MFVideoFormat_Y216", NULL },
+    { FALSE, MFVideoFormat_Y410, L"MFVideoFormat_Y410", NULL },
+    { FALSE, MFVideoFormat_Y416, L"MFVideoFormat_Y416", NULL },
+    /* Encoded Video Types */
+    { FALSE, MFVideoFormat_DV25, L"MFVideoFormat_DV25", NULL },
+    { FALSE, MFVideoFormat_DV50, L"MFVideoFormat_DV50", NULL },
+    { FALSE, MFVideoFormat_DVC, L"MFVideoFormat_DVC", NULL },
+    { FALSE, MFVideoFormat_DVH1, L"MFVideoFormat_DVH1", NULL },
+    { FALSE, MFVideoFormat_DVHD, L"MFVideoFormat_DVHD", NULL },
+    { FALSE, MFVideoFormat_DVSD, L"MFVideoFormat_DVSD", NULL },
+    { FALSE, MFVideoFormat_DVSL, L"MFVideoFormat_DVSL", NULL },
+    { FALSE, MFVideoFormat_H264, L"MFVideoFormat_H264", NULL },
+    { FALSE, MFVideoFormat_M4S2, L"MFVideoFormat_M4S2", NULL },
+    { FALSE, MFVideoFormat_MJPG, L"MFVideoFormat_MJPG", NULL },
+    { FALSE, MFVideoFormat_MP43, L"MFVideoFormat_MP43", NULL },
+    { FALSE, MFVideoFormat_MP4S, L"MFVideoFormat_MP4S", NULL },
+    { FALSE, MFVideoFormat_MP4V, L"MFVideoFormat_MP4V", NULL },
+    { FALSE, MFVideoFormat_MPEG2, L"MFVideoFormat_MPEG2", NULL },
+    { FALSE, MFVideoFormat_MPG1, L"MFVideoFormat_MPG1", NULL },
+    { FALSE, MFVideoFormat_MSS1, L"MFVideoFormat_MSS1", NULL },
+    { FALSE, MFVideoFormat_MSS2, L"MFVideoFormat_MSS2", NULL },
+    { FALSE, MFVideoFormat_WMV1, L"MFVideoFormat_WMV1", NULL },
+    { FALSE, MFVideoFormat_WMV2, L"MFVideoFormat_WMV2", NULL },
+    { FALSE, MFVideoFormat_WMV3, L"MFVideoFormat_WMV3", NULL },
+    { FALSE, MFVideoFormat_WVC1, L"MFVideoFormat_WVC1", NULL },
 };
 
 class CMFCameraSource : public IMFSourceReaderCallback {
 public:
-	static HRESULT CreateInstance(LONG lWidth, LONG lHeight, FrameCallback pfnCallback, CMFCameraSource **ppSource)
-	{
-		if (ppSource == NULL) return E_POINTER;
-
-		CMFCameraSource *pSource = new (std::nothrow) CMFCameraSource();
-		if (pSource == NULL) return E_OUTOFMEMORY;
-
-		HRESULT hr = pSource->Initialize(lWidth, lHeight, pfnCallback);
-
-		if (SUCCEEDED(hr))
-		{
-			*ppSource = pSource;
-
-			//
-			// Client should Release after using this instance.
-			//
-			(*ppSource)->AddRef();
-		}
-
-		return hr;
-	}
-
-	//
-	// IUnknown methods
-	//
-	STDMETHODIMP QueryInterface(REFIID iid, void **ppv)
-	{
-		static const QITAB qit[] =
-		{
-			QITABENT(CMFCameraSource, IMFSourceReaderCallback),
-			{ 0 },
-		};
-
-		return QISearch(this, qit, iid, ppv);
-	}
-
-	STDMETHODIMP_(ULONG) AddRef()
-	{
-		return InterlockedIncrement(&m_lRefCount);
-	}
-
-	STDMETHODIMP_(ULONG) Release()
-	{
-		ULONG uCount = InterlockedDecrement(&m_lRefCount);
-
-		if (uCount == 0)
-		{
-			delete this;
-		}
-
-		return uCount;
-	}
-
-	//
-	// IMFSourceReaderCallback methods
-	//
-	STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample)
-	{
-		HRESULT hr = hrStatus;
-		IMFMediaBuffer *pBuffer = NULL;
-		DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
-
-		EnterCriticalSection(&m_csLock);
-
-		if (m_pfnFrameCallback)
-		{
-			//
-			// We just call the provided callback if available. We will continue to request for more frames if callback will
-			// return S_OK.
-			//
-			hr = m_pfnFrameCallback(hrStatus, dwStreamIndex, dwStreamFlags, llTimestamp, pSample);
-		}
-
-		//
-		// Request the next frame. If callback function returns != S_OK, then streaming will be stopped.
-		//
-		if (SUCCEEDED(hr))
-		{
-			hr = m_pIReader->ReadSample(dwStream, 0, NULL, NULL, NULL, NULL);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"ReadSample", hr);
-			}
-		}
-
-		LeaveCriticalSection(&m_csLock);
-
-		return hr;
-	}
-
-	STDMETHODIMP OnEvent(DWORD, IMFMediaEvent*) { return S_OK; }
-	STDMETHODIMP OnFlush(DWORD) { return S_OK; }
-
-	HRESULT SetDevice(IMFActivate *pActivate)
-	{
-		if (!m_bInitialized) return E_NOT_VALID_STATE;
-
-		HRESULT hr = S_OK;
-		IMFMediaSource *pSource = NULL;
-		IMFAttributes *pAttributes = NULL;
-		IMFMediaType *pType = NULL;
-		IMFMediaType *pOutType = NULL;
-		wchar_t szTrace[MAX_PATH] = { 0 };
-
-		DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
-
-		EnterCriticalSection(&m_csLock);
-
-		do
-		{
-			//
-			// Create the media source for the device...
-			//
-			hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
-				break;
-			}
-
-			//
-			// Get the symbolic link...
-			//
-			hr = pActivate->GetAllocatedString(
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
-				&m_pszSymbolicLink,
-				&m_uiSymbolicLinkLen);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
-				break;
-			}
-
-			//
-			// Create an attribute store to hold initialization settings...
-			//
-			hr = MFCreateAttributes(&pAttributes, 2);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-				break;
-			}
-
-			hr = pAttributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);
-				break;
-			}
-
-			//
-			// Set the callback pointer to this object...
-			//
-			hr = pAttributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, this);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"SetUnknown", hr);
-				break;
-			}
-
-			//
-			// Then create the source reader...
-			//
-			hr = MFCreateSourceReaderFromMediaSource(pSource, pAttributes, &m_pIReader);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);
-				break;
-			}
-
-			//
-			// Try to find a suitable output type...
-			//
-			BOOL bFound = FALSE;
-
-			for (DWORD j = 0;; j++)
-			{
-				hr = m_pIReader->GetNativeMediaType(dwStream, j, &pType);
-
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
-					break;
-				}
-
-				GUID subType = { 0 };
-				hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
-
-				//
-				// Check if its in our table of supported types...
-				//
-				for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
-				{
-					if (subType == FormatConversions[k].guidSubType)
-					{
-						UINT32 uFrNume, uFrDeno;
-						UINT32 uParNume, uParDeno;
-						UINT32 uiTempX, uiTempY;
-
-						MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiTempX, &uiTempY);
-						MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
-						MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
-
-						hr = GetDefaultImageStride(pType, &m_lDefaultStride);
-
-						StringCchPrintf(szTrace, MAX_PATH, L"Native(j,k):(%d,%d) %s, W: %d, H: %d, Stride: %d, F.Rate: "
-							L"%d:%d, PAR: %d:%d",
-							j,
-							k,
-							FormatConversions[k].pwszGuidSubType,
-							m_uiWidth,
-							m_uiHeight,
-							m_lDefaultStride,
-							uFrNume,
-							uFrDeno,
-							uParNume,
-							uParDeno);
-
-						EventWriteInfoW(M, FL, FN, szTrace);
-
-						if (FormatConversions[k].guidSubType == MFVideoFormat_YUY2 &&
-							uiTempX == m_uiWidth && uiTempY == m_uiHeight)
-						{
-							// __TRACE(pTrace, TL_INFO, KW_INFO, L"Set YUY2 as media subtype format.");
-
-							hr = m_pIReader->SetCurrentMediaType(dwStream, NULL, pType);
-
-							if (FAILED(hr))
-							{
-								EventWriteHresultError(M, FL, FN, L"SetCurrentMediaType", hr);
-							}
-
-							bFound = TRUE;
-							break;
-						}
-					}
-				}
-
-				SafeRelease(&pType);
-				if (bFound) break;
-				if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
-			}
-
-			if (!bFound)
-			{
-				//
-				// Set output media type to RGB32. Whatever native type is supported in our source, source reader will automatically
-				// insert required decoders/transforms in the pipeline.
-				//
-				// __TRACE(pTrace, TL_INFO, KW_INFO, L"Use native as media type format.");
-
-				hr = MFCreateMediaType(&pOutType);
-
-				if (FAILED(hr))
-				{					
-					EventWriteHresultError(M, FL, FN, L"MFCreateMediaType", hr);
-				}
-
-				hr = pOutType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"SetGUID(MF_MT_MAJOR_TYPE...)", hr);					
-				}
-
-				hr = pOutType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
-
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"SetGUID(MF_MT_SUBTYPE...)", hr);					
-				}
-
-				hr = MFSetAttributeSize(pOutType, MF_MT_FRAME_SIZE, m_uiWidth, m_uiHeight);
-
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"MFSetAttributeSize", hr);					
-				}
-
-				hr = m_pIReader->SetCurrentMediaType(dwStream, NULL, pOutType);
-
-				if (FAILED(hr))
-				{					
-					EventWriteHresultError(M, FL, FN, L"SetCurrentMediaType", hr);
-				}
-
-				SafeRelease(&pOutType);
-			}
-
-			if (SUCCEEDED(hr))
-			{
-				//
-				// Ask for the first sample. This call will cause our OnReadSample callback to be called back. Call ReadSample
-				// again within the callback function to get the next frame and so on.
-				//
-				hr = m_pIReader->ReadSample(dwStream, 0, NULL, NULL, NULL, NULL);
-
-				if (FAILED(hr))
-				{					
-					EventWriteHresultError(M, FL, FN, L"ReadSample", hr);
-				}
-			}
-		}
-		while (false);
-
-		SafeRelease(&pSource);
-		SafeRelease(&pAttributes);
-		SafeRelease(&pType);
-		SafeRelease(&pOutType);
-
-		LeaveCriticalSection(&m_csLock);
-
-		return hr;
-	}
-
-	HRESULT CloseDevice()
-	{
-		EnterCriticalSection(&m_csLock);
-		SafeRelease(&m_pIReader);
-
-		CoTaskMemFree(m_pszSymbolicLink);
-		m_pszSymbolicLink = NULL;
-		m_uiSymbolicLinkLen = 0;
-
-		LeaveCriticalSection(&m_csLock);
-
-		return S_OK;
-	}
-
-	HRESULT ResizeVideo(WORD wWidth, WORD wHeight)
-	{
-		return E_NOTIMPL;
-	}
+    static HRESULT CreateInstance(LONG lWidth, LONG lHeight, FrameCallback pfnCallback, CMFCameraSource **ppSource)
+    {
+        if (ppSource == NULL) return E_POINTER;
+
+        CMFCameraSource *pSource = new (std::nothrow) CMFCameraSource();
+        if (pSource == NULL) return E_OUTOFMEMORY;
+
+        HRESULT hr = pSource->Initialize(lWidth, lHeight, pfnCallback);
+
+        if (SUCCEEDED(hr))
+        {
+            *ppSource = pSource;
+
+            //
+            // Client should Release after using this instance.
+            //
+            (*ppSource)->AddRef();
+        }
+
+        return hr;
+    }
+
+    //
+    // IUnknown methods
+    //
+    STDMETHODIMP QueryInterface(REFIID iid, void **ppv)
+    {
+        static const QITAB qit[] =
+        {
+            QITABENT(CMFCameraSource, IMFSourceReaderCallback),
+            { 0 },
+        };
+
+        return QISearch(this, qit, iid, ppv);
+    }
+
+    STDMETHODIMP_(ULONG) AddRef()
+    {
+        return InterlockedIncrement(&m_lRefCount);
+    }
+
+    STDMETHODIMP_(ULONG) Release()
+    {
+        ULONG uCount = InterlockedDecrement(&m_lRefCount);
+
+        if (uCount == 0)
+        {
+            delete this;
+        }
+
+        return uCount;
+    }
+
+    //
+    // IMFSourceReaderCallback methods
+    //
+    STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample)
+    {
+        HRESULT hr = hrStatus;
+        IMFMediaBuffer *pBuffer = NULL;
+        DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
+
+        EnterCriticalSection(&m_csLock);
+
+        if (m_pfnFrameCallback)
+        {
+            //
+            // We just call the provided callback if available. We will continue to request for more frames if callback will
+            // return S_OK.
+            //
+            hr = m_pfnFrameCallback(hrStatus, dwStreamIndex, dwStreamFlags, llTimestamp, pSample);
+        }
+
+        //
+        // Request the next frame. If callback function returns != S_OK, then streaming will be stopped.
+        //
+        if (SUCCEEDED(hr))
+        {
+            hr = m_pIReader->ReadSample(dwStream, 0, NULL, NULL, NULL, NULL);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"ReadSample", hr);
+            }
+        }
+
+        LeaveCriticalSection(&m_csLock);
+
+        return hr;
+    }
+
+    STDMETHODIMP OnEvent(DWORD, IMFMediaEvent*) { return S_OK; }
+    STDMETHODIMP OnFlush(DWORD) { return S_OK; }
+
+    HRESULT SetDevice(IMFActivate *pActivate)
+    {
+        if (!m_bInitialized) return E_NOT_VALID_STATE;
+
+        HRESULT hr = S_OK;
+        IMFMediaSource *pSource = NULL;
+        IMFAttributes *pAttributes = NULL;
+        IMFMediaType *pType = NULL;
+        IMFMediaType *pOutType = NULL;
+        wchar_t szTrace[MAX_PATH] = { 0 };
+
+        DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
+
+        EnterCriticalSection(&m_csLock);
+
+        do
+        {
+            //
+            // Create the media source for the device...
+            //
+            hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
+                break;
+            }
+
+            //
+            // Get the symbolic link...
+            //
+            hr = pActivate->GetAllocatedString(
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
+                &m_pszSymbolicLink,
+                &m_uiSymbolicLinkLen);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
+                break;
+            }
+
+            //
+            // Create an attribute store to hold initialization settings...
+            //
+            hr = MFCreateAttributes(&pAttributes, 2);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                break;
+            }
+
+            hr = pAttributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);
+                break;
+            }
+
+            //
+            // Set the callback pointer to this object...
+            //
+            hr = pAttributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, this);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"SetUnknown", hr);
+                break;
+            }
+
+            //
+            // Then create the source reader...
+            //
+            hr = MFCreateSourceReaderFromMediaSource(pSource, pAttributes, &m_pIReader);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);
+                break;
+            }
+
+            //
+            // Try to find a suitable output type...
+            //
+            BOOL bFound = FALSE;
+
+            for (DWORD j = 0;; j++)
+            {
+                hr = m_pIReader->GetNativeMediaType(dwStream, j, &pType);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
+                    break;
+                }
+
+                GUID subType = { 0 };
+                hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+                //
+                // Check if its in our table of supported types...
+                //
+                for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
+                {
+                    if (subType == FormatConversions[k].guidSubType)
+                    {
+                        UINT32 uFrNume, uFrDeno;
+                        UINT32 uParNume, uParDeno;
+                        UINT32 uiTempX, uiTempY;
+
+                        MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiTempX, &uiTempY);
+                        MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
+                        MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
+
+                        hr = GetDefaultImageStride(pType, &m_lDefaultStride);
+
+                        StringCchPrintf(szTrace, MAX_PATH, L"Native(j,k):(%d,%d) %s, W: %d, H: %d, Stride: %d, F.Rate: "
+                            L"%d:%d, PAR: %d:%d",
+                            j,
+                            k,
+                            FormatConversions[k].pwszGuidSubType,
+                            m_uiWidth,
+                            m_uiHeight,
+                            m_lDefaultStride,
+                            uFrNume,
+                            uFrDeno,
+                            uParNume,
+                            uParDeno);
+
+                        EventWriteInfoW(M, FL, FN, szTrace);
+
+                        if (FormatConversions[k].guidSubType == MFVideoFormat_YUY2 &&
+                            uiTempX == m_uiWidth && uiTempY == m_uiHeight)
+                        {
+                            // __TRACE(pTrace, TL_INFO, KW_INFO, L"Set YUY2 as media subtype format.");
+
+                            hr = m_pIReader->SetCurrentMediaType(dwStream, NULL, pType);
+
+                            if (FAILED(hr))
+                            {
+                                EventWriteHresultError(M, FL, FN, L"SetCurrentMediaType", hr);
+                            }
+
+                            bFound = TRUE;
+                            break;
+                        }
+                    }
+                }
+
+                SafeRelease(&pType);
+                if (bFound) break;
+                if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
+            }
+
+            if (!bFound)
+            {
+                //
+                // Set output media type to RGB32. Whatever native type is supported in our source, source reader will automatically
+                // insert required decoders/transforms in the pipeline.
+                //
+                // __TRACE(pTrace, TL_INFO, KW_INFO, L"Use native as media type format.");
+
+                hr = MFCreateMediaType(&pOutType);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"MFCreateMediaType", hr);
+                }
+
+                hr = pOutType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"SetGUID(MF_MT_MAJOR_TYPE...)", hr);
+                }
+
+                hr = pOutType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"SetGUID(MF_MT_SUBTYPE...)", hr);
+                }
+
+                hr = MFSetAttributeSize(pOutType, MF_MT_FRAME_SIZE, m_uiWidth, m_uiHeight);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"MFSetAttributeSize", hr);
+                }
+
+                hr = m_pIReader->SetCurrentMediaType(dwStream, NULL, pOutType);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"SetCurrentMediaType", hr);
+                }
+
+                SafeRelease(&pOutType);
+            }
+
+            if (SUCCEEDED(hr))
+            {
+                //
+                // Ask for the first sample. This call will cause our OnReadSample callback to be called back. Call ReadSample
+                // again within the callback function to get the next frame and so on.
+                //
+                hr = m_pIReader->ReadSample(dwStream, 0, NULL, NULL, NULL, NULL);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"ReadSample", hr);
+                }
+            }
+        } while (false);
+
+        SafeRelease(&pSource);
+        SafeRelease(&pAttributes);
+        SafeRelease(&pType);
+        SafeRelease(&pOutType);
+
+        LeaveCriticalSection(&m_csLock);
+
+        return hr;
+    }
+
+    HRESULT CloseDevice()
+    {
+        EnterCriticalSection(&m_csLock);
+        SafeRelease(&m_pIReader);
+
+        CoTaskMemFree(m_pszSymbolicLink);
+        m_pszSymbolicLink = NULL;
+        m_uiSymbolicLinkLen = 0;
+
+        LeaveCriticalSection(&m_csLock);
+
+        return S_OK;
+    }
+
+    HRESULT ResizeVideo(WORD wWidth, WORD wHeight)
+    {
+        return E_NOTIMPL;
+    }
 
 protected:
-	CMFCameraSource()
-	{
-		InitializeCriticalSection(&m_csLock);
+    CMFCameraSource()
+    {
+        InitializeCriticalSection(&m_csLock);
 
-		m_lRefCount = 0;
-		m_pszSymbolicLink = NULL;
-		m_uiSymbolicLinkLen = 0;
+        m_lRefCount = 0;
+        m_pszSymbolicLink = NULL;
+        m_uiSymbolicLinkLen = 0;
 
-		m_pIReader = NULL;
+        m_pIReader = NULL;
 
-		m_uiWidth = m_uiHeight = m_lDefaultStride = 0;
-		ZeroMemory(&m_mfrAspectRatio, sizeof(MFRatio));
-	}
+        m_uiWidth = m_uiHeight = m_lDefaultStride = 0;
+        ZeroMemory(&m_mfrAspectRatio, sizeof(MFRatio));
+    }
 
-	virtual ~CMFCameraSource()
-	{
-		DeleteCriticalSection(&m_csLock);
-	}
+    virtual ~CMFCameraSource()
+    {
+        DeleteCriticalSection(&m_csLock);
+    }
 
-	HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnCallback)
-	{
-		m_uiWidth = (UINT)lWidth;
-		m_uiHeight = (UINT)lHeight;
-		m_pfnFrameCallback = pfnCallback;
-		m_bInitialized = TRUE;
-		return S_OK;
-	}
+    HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnCallback)
+    {
+        m_uiWidth = (UINT)lWidth;
+        m_uiHeight = (UINT)lHeight;
+        m_pfnFrameCallback = pfnCallback;
+        m_bInitialized = TRUE;
+        return S_OK;
+    }
 
 protected:
-	LONG m_lRefCount;
-	CRITICAL_SECTION m_csLock;
-	IMFSourceReader *m_pIReader;
-	wchar_t *m_pszSymbolicLink;
-	UINT32 m_uiSymbolicLinkLen;
-	UINT m_uiWidth;
-	UINT m_uiHeight;
-	LONG m_lDefaultStride;
-	MFRatio m_mfrAspectRatio;
-	FrameCallback m_pfnFrameCallback;
-	BOOL m_bInitialized;
+    LONG m_lRefCount;
+    CRITICAL_SECTION m_csLock;
+    IMFSourceReader *m_pIReader;
+    wchar_t *m_pszSymbolicLink;
+    UINT32 m_uiSymbolicLinkLen;
+    UINT m_uiWidth;
+    UINT m_uiHeight;
+    LONG m_lDefaultStride;
+    MFRatio m_mfrAspectRatio;
+    FrameCallback m_pfnFrameCallback;
+    BOOL m_bInitialized;
 };
 
 class CameraMf : public ICameraMf {
 public:
-	CameraMf() :
-		m_lRefCount(0),
-		m_bInitialized(FALSE),
-		m_pfnFrameCallback(NULL),
-		m_lWidth(640),
-		m_lHeight(480),
-		m_pCamSource(NULL)
-	{}
+    CameraMf() :
+        m_lRefCount(0),
+        m_bInitialized(FALSE),
+        m_pfnFrameCallback(NULL),
+        m_lWidth(640),
+        m_lHeight(480),
+        m_pCamSource(NULL)
+    {}
 
-	virtual ~CameraMf()
-	{
-		if (m_bRendered) StopRenderAsync();
-		SafeRelease(&m_pCamSource);
-	}
+    virtual ~CameraMf()
+    {
+        if (m_bRendered) StopRenderAsync();
+        SafeRelease(&m_pCamSource);
+    }
 
-	//
-	// IUnknown methods
-	//
-	STDMETHODIMP QueryInterface(REFIID iid, void **ppv)
-	{
-		if ((iid == __uuidof(IUnknown)) || (iid == __uuidof(ICameraMf)))
-		{
-			*ppv = static_cast<CameraMf*>(this);
-		}
-		else
-		{
-			*ppv = NULL;
-			return E_NOINTERFACE;
-		}
+    //
+    // IUnknown methods
+    //
+    STDMETHODIMP QueryInterface(REFIID iid, void **ppv)
+    {
+        if ((iid == __uuidof(IUnknown)) || (iid == __uuidof(ICameraMf)))
+        {
+            *ppv = static_cast<CameraMf*>(this);
+        }
+        else
+        {
+            *ppv = NULL;
+            return E_NOINTERFACE;
+        }
 
-		AddRef();
-		return S_OK;
-	}
+        AddRef();
+        return S_OK;
+    }
 
-	STDMETHODIMP_(ULONG) AddRef()
-	{
-		return InterlockedIncrement(&m_lRefCount);
-	}
+    STDMETHODIMP_(ULONG) AddRef()
+    {
+        return InterlockedIncrement(&m_lRefCount);
+    }
 
-	STDMETHODIMP_(ULONG) Release()
-	{
-		ULONG uCount = InterlockedDecrement(&m_lRefCount);
+    STDMETHODIMP_(ULONG) Release()
+    {
+        ULONG uCount = InterlockedDecrement(&m_lRefCount);
 
-		if (uCount == 0)
-		{
-			delete this;
-		}
+        if (uCount == 0)
+        {
+            delete this;
+        }
 
-		return uCount;
-	}
+        return uCount;
+    }
 
-	//
-	// ICameraMf methods.
-	//
-	HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnFrameCallback)
-	{
-		m_lWidth = lWidth;
-		m_lHeight = lHeight;
-		m_pfnFrameCallback = pfnFrameCallback;
+    //
+    // ICameraMf methods.
+    //
+    HRESULT Initialize(LONG lWidth, LONG lHeight, FrameCallback pfnFrameCallback)
+    {
+        m_lWidth = lWidth;
+        m_lHeight = lHeight;
+        m_pfnFrameCallback = pfnFrameCallback;
 
-		HRESULT hr = CMFCameraSource::CreateInstance(m_lWidth, m_lHeight, m_pfnFrameCallback, &m_pCamSource);
+        HRESULT hr = CMFCameraSource::CreateInstance(m_lWidth, m_lHeight, m_pfnFrameCallback, &m_pCamSource);
 
-		if (SUCCEEDED(hr)) m_bInitialized = TRUE;
+        if (SUCCEEDED(hr)) m_bInitialized = TRUE;
 
-		return hr;
-	}
+        return hr;
+    }
 
-	//
-	// Param 'ppFriendlyNames' will be allocated here based on the required size. Caller should call free() on 'ppFriendlyNames'
-	// after call. If more than one cameras detected, names will be separated by a semicolon (;).
-	//
-	HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize)
-	{
-		ChooseDeviceParam param = { 0 };
-		IMFAttributes *pAttributes = NULL;
-		BOOL bReturn = FALSE;
-		HRESULT hr = E_FAIL;
-		DWORD dwDevIndex = -1;
-		wchar_t *pszOldNames = NULL;
-		wchar_t *pszNames = NULL;
-		size_t cchTotal = 0;
+    //
+    // Param 'ppFriendlyNames' will be allocated here based on the required size. Caller should call free() on 'ppFriendlyNames'
+    // after call. If more than one cameras detected, names will be separated by a semicolon (;).
+    //
+    HRESULT GetFriendlyNames(wchar_t **ppFriendlyNames, LONG *pcbSize)
+    {
+        ChooseDeviceParam param = { 0 };
+        IMFAttributes *pAttributes = NULL;
+        BOOL bReturn = FALSE;
+        HRESULT hr = E_FAIL;
+        DWORD dwDevIndex = -1;
+        wchar_t *pszOldNames = NULL;
+        wchar_t *pszNames = NULL;
+        size_t cchTotal = 0;
 
-		do
-		{
-			*pcbSize = 0;
+        do
+        {
+            *pcbSize = 0;
 
-			//
-			// Initialize an attribute store to specify enumeration parameters.
-			//
-			hr = MFCreateAttributes(&pAttributes, 1);
+            //
+            // Initialize an attribute store to specify enumeration parameters.
+            //
+            hr = MFCreateAttributes(&pAttributes, 1);
 
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-				break;
-			}
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                break;
+            }
 
-			//
-			// Ask for source type = video capture devices.
-			//
-			hr = pAttributes->SetGUID(
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+            //
+            // Ask for source type = video capture devices.
+            //
+            hr = pAttributes->SetGUID(
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
 
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"SetGUID", hr);
-				break;
-			}
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"SetGUID", hr);
+                break;
+            }
 
-			//
-			// Enumerate devices.
-			//
-			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
+            //
+            // Enumerate devices.
+            //
+            hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
 
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
-				break;
-			}
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+                break;
+            }
 
-			if (param.count)
-			{
-				BOOL bSuccess = TRUE;
+            if (param.count)
+            {
+                BOOL bSuccess = TRUE;
 
-				for (DWORD i = 0; i < param.count; i++)
-				{
-					wchar_t *pszFriendlyNameTmp = NULL;
-
-#pragma warning(suppress: 6387)
-					hr = param.ppDevices[i]->GetAllocatedString(
-						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
-						&pszFriendlyNameTmp,
-						NULL);
-
-					if (FAILED(hr))
-					{
-						EventWriteHresultError(M, FL, FN, L"HrError MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME", hr);
-						bSuccess = FALSE;
-						break;
-					}
-
-					if (pszFriendlyNameTmp)
-					{
-						EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
-
-						size_t cchLen = 0;
-
-						StringCchLength(pszFriendlyNameTmp, MAX_PATH, &cchLen);
-						EventWriteNumberInfo(M, FL, FN, L"cchLen", cchLen);
-						
-						cchTotal += cchLen + 2;
-
-						pszOldNames = pszNames;
-
-						pszNames = (wchar_t*)realloc(pszNames, cchTotal * sizeof(wchar_t));
-
-						if (pszNames)
-						{
-							if (i == 0)
-							{
-								//
-								// So 'StringCchCat' will work on first concatenate.
-								//
-								pszNames[0] = L'\0';
-							}
-
-							StringCchCat(pszNames, cchTotal, pszFriendlyNameTmp);
-							StringCchCat(pszNames, cchTotal, L";");							
-						}
-						else
-						{
-							EventWriteLastError(M, FL, FN, L"Error realloc", GetLastError());
-							free(pszOldNames);
-							bSuccess = FALSE;
-							break;
-						}
-
-						CoTaskMemFree(pszFriendlyNameTmp);
-					}
-				}
-
-				if (bSuccess)
-				{
-					size_t cchLen = 0, alloc = 0;
-
-					StringCchLength(pszNames, cchTotal, &cchLen);
-					EventWriteNumberInfo(M, FL, FN, L"cchLen (1st)", cchLen);
-
-					//
-					// Remove the last semicolon.
-					//
-					pszNames[cchLen - 1] = L'\0';
-					EventWriteWideStrInfo(M, FL, FN, L"Name list", pszNames);
-
-					StringCchLength(pszNames, cchTotal, &cchLen);
-					EventWriteNumberInfo(M, FL, FN, L"cchLen (2nd)", cchLen);
-
-					alloc = (cchLen * sizeof(wchar_t)) + sizeof(wchar_t);
-
-					*ppFriendlyNames = (wchar_t*)malloc(alloc);
-
-					if (*ppFriendlyNames)
-					{
-						StringCchCopy(*ppFriendlyNames, alloc, pszNames);
-						*pcbSize = alloc;
-					}
-				}
-			}
-		}
-		while (false);
-
-		if (pszNames) free(pszNames);
-
-		SafeRelease(&pAttributes);
-
-		for (DWORD i = 0; i < param.count; i++)
-		{
-			SafeRelease(&param.ppDevices[i]);
-		}
-
-		CoTaskMemFree(param.ppDevices);
-
-		return hr;
-	}
-
-	HRESULT StartRenderAsync(wchar_t *pszFriendlyName)
-	{
-		if (!m_bInitialized) return E_NOT_VALID_STATE;
-
-		ChooseDeviceParam param = { 0 };
-		IMFAttributes *pAttributes = NULL;
-		BOOL bCamPresent = FALSE;
-		BOOL bReturn = FALSE;
-		HRESULT hr = S_OK;
-		DWORD dwDevIndex = -1;
-		m_bRendered = FALSE;
-
-		do
-		{
-			//
-			// Initialize an attribute store to specify enumeration parameters.
-			//
-			hr = MFCreateAttributes(&pAttributes, 1);
-
-			if (FAILED(hr))
-			{				
-				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-				break;
-			}
-
-			//
-			// Ask for source type = video capture devices.
-			//
-			hr = pAttributes->SetGUID(
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);				
-				break;
-			}
-
-			//
-			// Enumerate devices.
-			//
-			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);				
-				break;
-			}
-
-			if (param.count)
-			{
-				for (DWORD i = 0; i < param.count; i++)
-				{
-					wchar_t *pszFriendlyNameTmp = NULL;
+                for (DWORD i = 0; i < param.count; i++)
+                {
+                    wchar_t *pszFriendlyNameTmp = NULL;
 
 #pragma warning(suppress: 6387)
-					hr = param.ppDevices[i]->GetAllocatedString(
-						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
-						&pszFriendlyNameTmp,
-						NULL);
+                    hr = param.ppDevices[i]->GetAllocatedString(
+                        MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+                        &pszFriendlyNameTmp,
+                        NULL);
 
-					if (FAILED(hr)) break;
+                    if (FAILED(hr))
+                    {
+                        EventWriteHresultError(M, FL, FN, L"HrError MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME", hr);
+                        bSuccess = FALSE;
+                        break;
+                    }
 
-					if (pszFriendlyNameTmp)
-					{
-						EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
+                    if (pszFriendlyNameTmp)
+                    {
+                        EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
 
-						if ((_wcsicmp(pszFriendlyNameTmp, pszFriendlyName)) == 0)
-						{
-							bCamPresent = TRUE;
-							dwDevIndex = i;
-							break;
-						}
+                        size_t cchLen = 0;
 
-						CoTaskMemFree(pszFriendlyNameTmp);
-					}
-				}
-			}
+                        StringCchLength(pszFriendlyNameTmp, MAX_PATH, &cchLen);
+                        EventWriteNumberInfo(M, FL, FN, L"cchLen", cchLen);
 
-			if (bCamPresent)
-			{
-				hr = m_pCamSource->SetDevice(param.ppDevices[dwDevIndex]);
-				
-				if (FAILED(hr))
-				{
-					m_bRendered = FALSE;
-				}
-				else
-				{
-					m_bRendered = TRUE;
-					bReturn = TRUE;
-				}
-			}
-			else
-			{				
-				EventWriteErrorW(M, FL, FN, L"Camera not available! Maybe disabled, not installed, or used?");
-			}
-		}
-		while (false);
+                        cchTotal += cchLen + 2;
 
-		SafeRelease(&pAttributes);
+                        pszOldNames = pszNames;
 
-		for (DWORD i = 0; i < param.count; i++)
-			SafeRelease(&param.ppDevices[i]);
+                        pszNames = (wchar_t*)realloc(pszNames, cchTotal * sizeof(wchar_t));
 
-		CoTaskMemFree(param.ppDevices);
+                        if (pszNames)
+                        {
+                            if (i == 0)
+                            {
+                                //
+                                // So 'StringCchCat' will work on first concatenate.
+                                //
+                                pszNames[0] = L'\0';
+                            }
 
-		return S_OK;
-	}
+                            StringCchCat(pszNames, cchTotal, pszFriendlyNameTmp);
+                            StringCchCat(pszNames, cchTotal, L";");
+                        }
+                        else
+                        {
+                            EventWriteLastError(M, FL, FN, L"Error realloc", GetLastError());
+                            free(pszOldNames);
+                            bSuccess = FALSE;
+                            break;
+                        }
 
-	HRESULT StopRenderAsync()
-	{
-		if (!m_bInitialized) return E_NOT_VALID_STATE;
+                        CoTaskMemFree(pszFriendlyNameTmp);
+                    }
+                }
 
-		m_pCamSource->CloseDevice();
-		m_bRendered = FALSE;
+                if (bSuccess)
+                {
+                    size_t cchLen = 0, alloc = 0;
 
-		return S_OK;
-	}
+                    StringCchLength(pszNames, cchTotal, &cchLen);
+                    EventWriteNumberInfo(M, FL, FN, L"cchLen (1st)", cchLen);
 
-	HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex)
-	{
-		//
-		// We just do camera enumeration here so no need for initialization. We just go through the whole process
-		// or open, read and close.
-		//
+                    //
+                    // Remove the last semicolon.
+                    //
+                    pszNames[cchLen - 1] = L'\0';
+                    EventWriteWideStrInfo(M, FL, FN, L"Name list", pszNames);
 
-		ChooseDeviceParam param = { 0 };
-		IMFAttributes *pAttributes = NULL;
-		BOOL bCamPresent = FALSE;
-		BOOL bReturn = FALSE;
-		HRESULT hr = E_FAIL;
-		LONG lDevIndex = -1;
+                    StringCchLength(pszNames, cchTotal, &cchLen);
+                    EventWriteNumberInfo(M, FL, FN, L"cchLen (2nd)", cchLen);
 
-		do
-		{
-			*pbSystemCamera = FALSE;
+                    alloc = (cchLen * sizeof(wchar_t)) + sizeof(wchar_t);
 
-			//
-			// Initialize an attribute store to specify enumeration parameters.
-			//
-			hr = MFCreateAttributes(&pAttributes, 1);
+                    *ppFriendlyNames = (wchar_t*)malloc(alloc);
 
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-				break;
-			}
+                    if (*ppFriendlyNames)
+                    {
+                        StringCchCopy(*ppFriendlyNames, alloc, pszNames);
+                        *pcbSize = alloc;
+                    }
+                }
+            }
+        } while (false);
 
-			//
-			// Ask for source type = video capture devices.
-			//
-			hr = pAttributes->SetGUID(
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+        if (pszNames) free(pszNames);
 
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"SetGUID", hr);
-				break;
-			}
+        SafeRelease(&pAttributes);
 
-			//
-			// Enumerate devices.
-			//
-			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
+        for (DWORD i = 0; i < param.count; i++)
+        {
+            SafeRelease(&param.ppDevices[i]);
+        }
 
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
-				break;
-			}
+        CoTaskMemFree(param.ppDevices);
 
-			if (param.count)
-			{
-				for (DWORD i = 0; i < param.count; i++)
-				{
-					wchar_t *pszFriendlyNameTmp = NULL;
+        return hr;
+    }
 
-#pragma warning(suppress: 6387)
-					hr = param.ppDevices[i]->GetAllocatedString(
-						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
-						&pszFriendlyNameTmp,
-						NULL);
+    HRESULT StartRenderAsync(wchar_t *pszFriendlyName)
+    {
+        if (!m_bInitialized) return E_NOT_VALID_STATE;
 
-					if (FAILED(hr)) break;
+        ChooseDeviceParam param = { 0 };
+        IMFAttributes *pAttributes = NULL;
+        BOOL bCamPresent = FALSE;
+        BOOL bReturn = FALSE;
+        HRESULT hr = S_OK;
+        DWORD dwDevIndex = -1;
+        m_bRendered = FALSE;
 
-					if (pszFriendlyNameTmp)
-					{
-						EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
+        do
+        {
+            //
+            // Initialize an attribute store to specify enumeration parameters.
+            //
+            hr = MFCreateAttributes(&pAttributes, 1);
 
-						if ((_wcsicmp(pszFriendlyNameTmp, pszFriendlyName)) == 0)
-						{
-							bCamPresent = TRUE;
-							lDevIndex = i;
-							*pIndex = i;
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                break;
+            }
 
-							EventWriteNumberInfo(M, FL, FN, L"Found. Index @", lDevIndex);
+            //
+            // Ask for source type = video capture devices.
+            //
+            hr = pAttributes->SetGUID(
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
 
-							break;
-						}
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);
+                break;
+            }
 
-						CoTaskMemFree(pszFriendlyNameTmp);
-					}
-				}
-			}
+            //
+            // Enumerate devices.
+            //
+            hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
 
-			if (bCamPresent)
-			{
-				*pbSystemCamera = TRUE;
-				hr = S_OK;
-			}
-			else
-			{
-				EventWriteWideStrInfo(M, FL, FN, L"Not available", pszFriendlyName);
-			}
-		}
-		while (false);
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+                break;
+            }
 
-		SafeRelease(&pAttributes);
-
-		for (DWORD i = 0; i < param.count; i++)
-		{
-			SafeRelease(&param.ppDevices[i]);
-		}
-
-		CoTaskMemFree(param.ppDevices);
-
-		return hr;
-	}
-
-	HRESULT MfDumpCameraInfo(wchar_t *pszFriendlyName)
-	{
-		HRESULT hr = MFStartup(MF_VERSION);
-
-		if (FAILED(hr))
-		{
-			EventWriteHresultError(M, FL, FN, L"MFStartup", hr);
-			return hr;
-		}
-
-		ChooseDeviceParam param = { 0 };
-		IMFAttributes *pAttributes = NULL;
-		BOOL bCamPresent = FALSE;
-		BOOL bReturn = FALSE;
-		DWORD dwDevIndex = -1;
-		wchar_t szTrace[MAX_PATH] = { 0 };
-
-		do
-		{
-			//
-			// Initialize an attribute store to specify enumeration parameters.
-			//
-			hr = MFCreateAttributes(&pAttributes, 1);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-				break;
-			}
-
-			//
-			// Ask for source type = video capture devices.
-			//
-			hr = pAttributes->SetGUID(
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
-
-			if (FAILED(hr))
-			{				
-				EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);
-				break;
-			}
-
-			//
-			// Enumerate devices.
-			//
-			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
-
-			if (FAILED(hr))
-			{				
-				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
-				break;
-			}
-
-			if (param.count)
-			{
-				for (DWORD i = 0; i < param.count; i++)
-				{
-					wchar_t *pszFriendlyName = NULL;
+            if (param.count)
+            {
+                for (DWORD i = 0; i < param.count; i++)
+                {
+                    wchar_t *pszFriendlyNameTmp = NULL;
 
 #pragma warning(suppress: 6387)
-					hr = param.ppDevices[i]->GetAllocatedString(
-						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
-						&pszFriendlyName,
-						NULL);
+                    hr = param.ppDevices[i]->GetAllocatedString(
+                        MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+                        &pszFriendlyNameTmp,
+                        NULL);
 
-					if (FAILED(hr) || !pszFriendlyName) break;
+                    if (FAILED(hr)) break;
 
-					if ((_wcsicmp(pszFriendlyName, L"Integrated Camera")) == 0)
-					{
-						bCamPresent = TRUE;
-						dwDevIndex = i;
-						CoTaskMemFree(pszFriendlyName);
-						break;
-					}
+                    if (pszFriendlyNameTmp)
+                    {
+                        EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
 
-					CoTaskMemFree(pszFriendlyName);
-				}
-			}
+                        if ((_wcsicmp(pszFriendlyNameTmp, pszFriendlyName)) == 0)
+                        {
+                            bCamPresent = TRUE;
+                            dwDevIndex = i;
+                            break;
+                        }
 
-			if (bCamPresent)
-			{
-				//
-				// Enumerate supported resolutions
-				//
-				IMFMediaSource *pSource = NULL;
-				IMFAttributes *pAttrib = NULL;
-				IMFMediaType *pType = NULL;
-				IMFMediaType *pOutType = NULL;
-				IMFActivate *pActivate = param.ppDevices[dwDevIndex];
-				IMFSourceReader *pIReader = NULL;
-				wchar_t *pszSymbolicLink;
-				UINT32 uiSymbolicLinkLen;
-				UINT ctr1, ctr2, ctr3;
+                        CoTaskMemFree(pszFriendlyNameTmp);
+                    }
+                }
+            }
 
-				DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
+            if (bCamPresent)
+            {
+                hr = m_pCamSource->SetDevice(param.ppDevices[dwDevIndex]);
 
-				//
-				// Create the media source for the device...
-				//
-				hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
+                if (FAILED(hr))
+                {
+                    m_bRendered = FALSE;
+                }
+                else
+                {
+                    m_bRendered = TRUE;
+                    bReturn = TRUE;
+                }
+            }
+            else
+            {
+                EventWriteErrorW(M, FL, FN, L"Camera not available! Maybe disabled, not installed, or used?");
+            }
+        } while (false);
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
-					break;
-				}
+        SafeRelease(&pAttributes);
 
-				//
-				// Get the symbolic link...
-				//
-				hr = pActivate->GetAllocatedString(
-					MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
-					&pszSymbolicLink,
-					&uiSymbolicLinkLen);
+        for (DWORD i = 0; i < param.count; i++)
+            SafeRelease(&param.ppDevices[i]);
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
-					break;
-				}
+        CoTaskMemFree(param.ppDevices);
 
-				//
-				// Create an attribute store to hold initialization settings...
-				//
-				hr = MFCreateAttributes(&pAttrib, 2);
+        return S_OK;
+    }
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-					break;
-				}
+    HRESULT StopRenderAsync()
+    {
+        if (!m_bInitialized) return E_NOT_VALID_STATE;
 
-				hr = pAttrib->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+        m_pCamSource->CloseDevice();
+        m_bRendered = FALSE;
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);			
-					break;
-				}
+        return S_OK;
+    }
 
-				//
-				// Then create the source reader...
-				//
-				hr = MFCreateSourceReaderFromMediaSource(pSource, pAttrib, &pIReader);
+    HRESULT IsSystemCamera(wchar_t *pszFriendlyName, PBOOL pbSystemCamera, LONG *pIndex)
+    {
+        //
+        // We just do camera enumeration here so no need for initialization. We just go through the whole process
+        // or open, read and close.
+        //
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);					
-					break;
-				}
+        ChooseDeviceParam param = { 0 };
+        IMFAttributes *pAttributes = NULL;
+        BOOL bCamPresent = FALSE;
+        BOOL bReturn = FALSE;
+        HRESULT hr = E_FAIL;
+        LONG lDevIndex = -1;
 
-				//
-				// Try to find a suitable output type...
-				//
-				BOOL bFound = FALSE;
+        do
+        {
+            *pbSystemCamera = FALSE;
 
-				for (ctr1 = 0;; ctr1++)
-				{
-					hr = pIReader->GetNativeMediaType(dwStream, ctr1, &pType);
+            //
+            // Initialize an attribute store to specify enumeration parameters.
+            //
+            hr = MFCreateAttributes(&pAttributes, 1);
 
-					if (FAILED(hr))
-					{						
-						EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
-						break;
-					}
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                break;
+            }
 
-					GUID subType = { 0 };
-					hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+            //
+            // Ask for source type = video capture devices.
+            //
+            hr = pAttributes->SetGUID(
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
 
-					//
-					// Check if its in our table of supported types...
-					//
-					for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
-					{
-						if (subType == FormatConversions[k].guidSubType)
-						{
-							UINT32 uFrNume, uFrDeno;
-							UINT32 uParNume, uParDeno;
-							UINT uiWidth, uiHeight;
-							LONG lDefaultStride;
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"SetGUID", hr);
+                break;
+            }
 
-							MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiWidth, &uiHeight);
-							MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
-							MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
-							hr = GetDefaultImageStride(pType, &lDefaultStride);
+            //
+            // Enumerate devices.
+            //
+            hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
 
-							StringCchPrintf(
-								szTrace,
-								MAX_PATH,
-								L"%s, W: %d, H: %d, Stride: %d, F.Rate: "
-								L"%d:%d, PAR: %d:%d",
-								FormatConversions[k].pwszGuidSubType,
-								uiWidth,
-								uiHeight,
-								lDefaultStride,
-								uFrNume,
-								uFrDeno,
-								uParNume,
-								uParDeno);
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+                break;
+            }
 
-							EventWriteInfoW(M, FL, FN, szTrace);
-						}
-					}
-
-					SafeRelease(&pType);
-
-					if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
-				}
-
-				if (hr == MF_E_NO_MORE_TYPES) hr = S_OK;
-
-				SafeRelease(&pActivate);
-				SafeRelease(&pIReader);
-
-				CoTaskMemFree(pszSymbolicLink);
-
-				if (pSource) pSource->Shutdown();
-				SafeRelease(&pSource);
-
-				SafeRelease(&pAttributes);
-				SafeRelease(&pType);
-				SafeRelease(&pOutType);
-			}
-		}
-		while (false);
-
-		SafeRelease(&pAttributes);
-
-		for (DWORD i = 0; i < param.count; i++)
-		{
-			SafeRelease(&param.ppDevices[i]);
-		}
-
-		CoTaskMemFree(param.ppDevices);
-
-		hr = MFShutdown();
-
-		if (FAILED(hr))
-		{
-			EventWriteHresultError(M, FL, FN, L"MFShutdown", hr);
-		}
-
-		return hr;
-	}
-
-	//
-	// Param 'ppInfo' will be allocated here based on the required size. Caller should call free() on 'ppInfo'
-	// after call when '*pCount' > 0. 'pCount' will contain the number of MFMEDIA_INFO's allocated.
-	//
-	HRESULT MfGetMediaInfo(wchar_t *pszFriendlyName, MFMEDIA_INFO **ppInfo, LONG *pCount)
-	{
-		HRESULT hr = MFStartup(MF_VERSION);
-
-		if (FAILED(hr))
-		{
-			EventWriteHresultError(M, FL, FN, L"MFStartup", hr);
-			return hr;
-		}
-
-		ChooseDeviceParam param = { 0 };
-		IMFAttributes *pAttributes = NULL;
-		BOOL bCamPresent = FALSE;
-		BOOL bReturn = FALSE;
-		DWORD dwDevIndex = -1;
-		wchar_t szTrace[MAX_PATH] = { 0 };
-		vector<MFMEDIA_INFO> infolist;
-
-		do
-		{
-			*pCount = 0;
-
-			//
-			// Initialize an attribute store to specify enumeration parameters.
-			//
-			hr = MFCreateAttributes(&pAttributes, 1);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-				break;
-			}
-
-			//
-			// Ask for source type = video capture devices.
-			//
-			hr = pAttributes->SetGUID(
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);
-				break;
-			}
-
-			//
-			// Enumerate devices.
-			//
-			hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
-
-			if (FAILED(hr))
-			{
-				EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
-				break;
-			}
-
-			if (param.count)
-			{
-				for (DWORD i = 0; i < param.count; i++)
-				{
-					wchar_t *pszName = NULL;
+            if (param.count)
+            {
+                for (DWORD i = 0; i < param.count; i++)
+                {
+                    wchar_t *pszFriendlyNameTmp = NULL;
 
 #pragma warning(suppress: 6387)
-					hr = param.ppDevices[i]->GetAllocatedString(
-						MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
-						&pszName,
-						NULL);
+                    hr = param.ppDevices[i]->GetAllocatedString(
+                        MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+                        &pszFriendlyNameTmp,
+                        NULL);
 
-					if (FAILED(hr) || !pszName) break;
+                    if (FAILED(hr)) break;
 
-					if ((_wcsicmp(pszName, pszFriendlyName)) == 0)
-					{
-						CoTaskMemFree(pszName);
-						bCamPresent = TRUE;
-						dwDevIndex = i;
-						break;
-					}
+                    if (pszFriendlyNameTmp)
+                    {
+                        EventWriteWideStrInfo(M, FL, FN, L"FriendlyName", pszFriendlyNameTmp);
 
-					CoTaskMemFree(pszName);
-				}
-			}
+                        if ((_wcsicmp(pszFriendlyNameTmp, pszFriendlyName)) == 0)
+                        {
+                            bCamPresent = TRUE;
+                            lDevIndex = i;
+                            *pIndex = i;
 
-			if (bCamPresent)
-			{
-				//
-				// Enumerate supported resolutions
-				//
-				IMFMediaSource *pSource = NULL;
-				IMFAttributes *pAttrib = NULL;
-				IMFMediaType *pType = NULL;
-				IMFMediaType *pOutType = NULL;
-				IMFActivate *pActivate = param.ppDevices[dwDevIndex];
-				IMFSourceReader *pIReader = NULL;
-				wchar_t *pszSymbolicLink;
-				UINT32 uiSymbolicLinkLen;
-				// UINT ctr1;
+                            EventWriteNumberInfo(M, FL, FN, L"Found. Index @", lDevIndex);
 
-				DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
+                            break;
+                        }
 
-				//
-				// Create the media source for the device...
-				//
-				hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
+                        CoTaskMemFree(pszFriendlyNameTmp);
+                    }
+                }
+            }
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
-					break;
-				}
+            if (bCamPresent)
+            {
+                *pbSystemCamera = TRUE;
+                hr = S_OK;
+            }
+            else
+            {
+                EventWriteWideStrInfo(M, FL, FN, L"Not available", pszFriendlyName);
+            }
+        } while (false);
 
-				//
-				// Get the symbolic link...
-				//
-				hr = pActivate->GetAllocatedString(
-					MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
-					&pszSymbolicLink,
-					&uiSymbolicLinkLen);
+        SafeRelease(&pAttributes);
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
-					break;
-				}
+        for (DWORD i = 0; i < param.count; i++)
+        {
+            SafeRelease(&param.ppDevices[i]);
+        }
 
-				//
-				// Create an attribute store to hold initialization settings...
-				//
-				hr = MFCreateAttributes(&pAttrib, 2);
+        CoTaskMemFree(param.ppDevices);
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
-					break;
-				}
+        return hr;
+    }
 
-				hr = pAttrib->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+    HRESULT MfDumpCameraInfo(wchar_t *pszFriendlyName)
+    {
+        HRESULT hr = MFStartup(MF_VERSION);
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);
-					break;
-				}
+        if (FAILED(hr))
+        {
+            EventWriteHresultError(M, FL, FN, L"MFStartup", hr);
+            return hr;
+        }
 
-				//
-				// Then create the source reader...
-				//
-				hr = MFCreateSourceReaderFromMediaSource(pSource, pAttrib, &pIReader);
+        ChooseDeviceParam param = { 0 };
+        IMFAttributes *pAttributes = NULL;
+        BOOL bCamPresent = FALSE;
+        BOOL bReturn = FALSE;
+        DWORD dwDevIndex = -1;
+        wchar_t szTrace[MAX_PATH] = { 0 };
 
-				if (FAILED(hr))
-				{
-					EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);
-					break;
-				}
+        do
+        {
+            //
+            // Initialize an attribute store to specify enumeration parameters.
+            //
+            hr = MFCreateAttributes(&pAttributes, 1);
 
-				//
-				// Try to find a suitable output type...
-				//
-				BOOL bFound = FALSE;
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                break;
+            }
 
-				for (UINT ctr1 = 0;; ctr1++)
-				{
-					hr = pIReader->GetNativeMediaType(dwStream, ctr1, &pType);
+            //
+            // Ask for source type = video capture devices.
+            //
+            hr = pAttributes->SetGUID(
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
 
-					if (FAILED(hr))
-					{
-						EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
-						break;
-					}
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);
+                break;
+            }
 
-					GUID subType = { 0 };
+            //
+            // Enumerate devices.
+            //
+            hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
 
-					hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+                break;
+            }
 
-					//
-					// Check if its in our table of supported types...
-					//
-					for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
-					{
-						if (subType == FormatConversions[k].guidSubType)
-						{
-							UINT32 uFrNume, uFrDeno;
-							UINT32 uParNume, uParDeno;
-							UINT uiWidth, uiHeight;
-							LONG lDefaultStride;
+            if (param.count)
+            {
+                for (DWORD i = 0; i < param.count; i++)
+                {
+                    wchar_t *pszFriendlyName = NULL;
 
-							MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiWidth, &uiHeight);
-							MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
-							MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
-							hr = GetDefaultImageStride(pType, &lDefaultStride);
+#pragma warning(suppress: 6387)
+                    hr = param.ppDevices[i]->GetAllocatedString(
+                        MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+                        &pszFriendlyName,
+                        NULL);
 
-							MFMEDIA_INFO mi;
+                    if (FAILED(hr) || !pszFriendlyName) break;
 
-							StringCchPrintf(mi.szSubtype, MAX_PATH, L"%s", FormatConversions[k].pwszGuidSubType);
-							mi.lIndex = ctr1;
-							mi.subTypeGuid = subType;
-							mi.lResolutionX = uiWidth;
-							mi.lResolutionY = uiHeight;
-							mi.lFrameRateNumerator = uFrNume;
-							mi.lFrameRateDenominator = uFrDeno;
-							mi.lPxAspectRatioNumerator = uParNume;
-							mi.lPxAspectRatioDenominator = uParDeno;
-							mi.lStride = lDefaultStride;
+                    if ((_wcsicmp(pszFriendlyName, L"Integrated Camera")) == 0)
+                    {
+                        bCamPresent = TRUE;
+                        dwDevIndex = i;
+                        CoTaskMemFree(pszFriendlyName);
+                        break;
+                    }
 
-							infolist.push_back(mi);
+                    CoTaskMemFree(pszFriendlyName);
+                }
+            }
 
-							StringCchPrintf(
-								szTrace,
-								MAX_PATH,
-								L"%s, W: %d, H: %d, Stride: %d, F.Rate: "
-								L"%d:%d, PAR: %d:%d",
-								FormatConversions[k].pwszGuidSubType,
-								uiWidth,
-								uiHeight,
-								lDefaultStride,
-								uFrNume,
-								uFrDeno,
-								uParNume,
-								uParDeno);
+            if (bCamPresent)
+            {
+                //
+                // Enumerate supported resolutions
+                //
+                IMFMediaSource *pSource = NULL;
+                IMFAttributes *pAttrib = NULL;
+                IMFMediaType *pType = NULL;
+                IMFMediaType *pOutType = NULL;
+                IMFActivate *pActivate = param.ppDevices[dwDevIndex];
+                IMFSourceReader *pIReader = NULL;
+                wchar_t *pszSymbolicLink;
+                UINT32 uiSymbolicLinkLen;
+                UINT ctr1, ctr2, ctr3;
 
-							EventWriteInfoW(M, FL, FN, szTrace);
-						}
-					}
+                DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
 
-					SafeRelease(&pType);
+                //
+                // Create the media source for the device...
+                //
+                hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
 
-					if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
-				}
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
+                    break;
+                }
 
-				if (hr == MF_E_NO_MORE_TYPES) hr = S_OK;
+                //
+                // Get the symbolic link...
+                //
+                hr = pActivate->GetAllocatedString(
+                    MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
+                    &pszSymbolicLink,
+                    &uiSymbolicLinkLen);
 
-				if (infolist.size() > 0)
-				{
-					*ppInfo = (MFMEDIA_INFO*)malloc(infolist.size() * sizeof(MFMEDIA_INFO));
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
+                    break;
+                }
 
-					if (*ppInfo)
-					{
-						*pCount = infolist.size();
+                //
+                // Create an attribute store to hold initialization settings...
+                //
+                hr = MFCreateAttributes(&pAttrib, 2);
 
-						MFMEDIA_INFO *pInfoTmp = *ppInfo;
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                    break;
+                }
 
-						for (int i = 0; i < infolist.size(); i++)
-						{
-							MFMEDIA_INFO infoItem = infolist.at(i);
-							CopyMemory(pInfoTmp, &infoItem, sizeof(MFMEDIA_INFO));
-							pInfoTmp++;
-						}
-					}
-				}
+                hr = pAttrib->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
 
-				SafeRelease(&pActivate);
-				SafeRelease(&pIReader);
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);
+                    break;
+                }
 
-				CoTaskMemFree(pszSymbolicLink);
+                //
+                // Then create the source reader...
+                //
+                hr = MFCreateSourceReaderFromMediaSource(pSource, pAttrib, &pIReader);
 
-				if (pSource)
-				{
-					pSource->Shutdown();
-				}
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);
+                    break;
+                }
 
-				SafeRelease(&pSource);
-				SafeRelease(&pAttributes);
-				SafeRelease(&pType);
-				SafeRelease(&pOutType);
-			}
-		}
-		while (false);
+                //
+                // Try to find a suitable output type...
+                //
+                BOOL bFound = FALSE;
 
-		SafeRelease(&pAttributes);
+                for (ctr1 = 0;; ctr1++)
+                {
+                    hr = pIReader->GetNativeMediaType(dwStream, ctr1, &pType);
 
-		for (DWORD i = 0; i < param.count; i++)
-		{
-			SafeRelease(&param.ppDevices[i]);
-		}
+                    if (FAILED(hr))
+                    {
+                        EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
+                        break;
+                    }
 
-		CoTaskMemFree(param.ppDevices);
+                    GUID subType = { 0 };
+                    hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
 
-		hr = MFShutdown();
+                    //
+                    // Check if its in our table of supported types...
+                    //
+                    for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
+                    {
+                        if (subType == FormatConversions[k].guidSubType)
+                        {
+                            UINT32 uFrNume, uFrDeno;
+                            UINT32 uParNume, uParDeno;
+                            UINT uiWidth, uiHeight;
+                            LONG lDefaultStride;
 
-		if (FAILED(hr))
-		{
-			EventWriteHresultError(M, FL, FN, L"MFShutdown", hr);
-		}
+                            MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiWidth, &uiHeight);
+                            MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
+                            MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
+                            hr = GetDefaultImageStride(pType, &lDefaultStride);
 
-		return hr;
-	}
+                            StringCchPrintf(
+                                szTrace,
+                                MAX_PATH,
+                                L"%s, W: %d, H: %d, Stride: %d, F.Rate: "
+                                L"%d:%d, PAR: %d:%d",
+                                FormatConversions[k].pwszGuidSubType,
+                                uiWidth,
+                                uiHeight,
+                                lDefaultStride,
+                                uFrNume,
+                                uFrDeno,
+                                uParNume,
+                                uParDeno);
+
+                            EventWriteInfoW(M, FL, FN, szTrace);
+                        }
+                    }
+
+                    SafeRelease(&pType);
+
+                    if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
+                }
+
+                if (hr == MF_E_NO_MORE_TYPES) hr = S_OK;
+
+                SafeRelease(&pActivate);
+                SafeRelease(&pIReader);
+
+                CoTaskMemFree(pszSymbolicLink);
+
+                if (pSource) pSource->Shutdown();
+                SafeRelease(&pSource);
+
+                SafeRelease(&pAttributes);
+                SafeRelease(&pType);
+                SafeRelease(&pOutType);
+            }
+        } while (false);
+
+        SafeRelease(&pAttributes);
+
+        for (DWORD i = 0; i < param.count; i++)
+        {
+            SafeRelease(&param.ppDevices[i]);
+        }
+
+        CoTaskMemFree(param.ppDevices);
+
+        hr = MFShutdown();
+
+        if (FAILED(hr))
+        {
+            EventWriteHresultError(M, FL, FN, L"MFShutdown", hr);
+        }
+
+        return hr;
+    }
+
+    //
+    // Param 'ppInfo' will be allocated here based on the required size. Caller should call free() on 'ppInfo'
+    // after call when '*pCount' > 0. 'pCount' will contain the number of MFMEDIA_INFO's allocated.
+    //
+    HRESULT MfGetMediaInfo(wchar_t *pszFriendlyName, MFMEDIA_INFO **ppInfo, LONG *pCount)
+    {
+        HRESULT hr = MFStartup(MF_VERSION);
+
+        if (FAILED(hr))
+        {
+            EventWriteHresultError(M, FL, FN, L"MFStartup", hr);
+            return hr;
+        }
+
+        ChooseDeviceParam param = { 0 };
+        IMFAttributes *pAttributes = NULL;
+        BOOL bCamPresent = FALSE;
+        BOOL bReturn = FALSE;
+        DWORD dwDevIndex = -1;
+        wchar_t szTrace[MAX_PATH] = { 0 };
+        vector<MFMEDIA_INFO> infolist;
+
+        do
+        {
+            *pCount = 0;
+
+            //
+            // Initialize an attribute store to specify enumeration parameters.
+            //
+            hr = MFCreateAttributes(&pAttributes, 1);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                break;
+            }
+
+            //
+            // Ask for source type = video capture devices.
+            //
+            hr = pAttributes->SetGUID(
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+                MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"pAttributes->SetGUID", hr);
+                break;
+            }
+
+            //
+            // Enumerate devices.
+            //
+            hr = MFEnumDeviceSources(pAttributes, &param.ppDevices, &param.count);
+
+            if (FAILED(hr))
+            {
+                EventWriteHresultError(M, FL, FN, L"MFEnumDeviceSources", hr);
+                break;
+            }
+
+            if (param.count)
+            {
+                for (DWORD i = 0; i < param.count; i++)
+                {
+                    wchar_t *pszName = NULL;
+
+#pragma warning(suppress: 6387)
+                    hr = param.ppDevices[i]->GetAllocatedString(
+                        MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+                        &pszName,
+                        NULL);
+
+                    if (FAILED(hr) || !pszName) break;
+
+                    if ((_wcsicmp(pszName, pszFriendlyName)) == 0)
+                    {
+                        CoTaskMemFree(pszName);
+                        bCamPresent = TRUE;
+                        dwDevIndex = i;
+                        break;
+                    }
+
+                    CoTaskMemFree(pszName);
+                }
+            }
+
+            if (bCamPresent)
+            {
+                //
+                // Enumerate supported resolutions
+                //
+                IMFMediaSource *pSource = NULL;
+                IMFAttributes *pAttrib = NULL;
+                IMFMediaType *pType = NULL;
+                IMFMediaType *pOutType = NULL;
+                IMFActivate *pActivate = param.ppDevices[dwDevIndex];
+                IMFSourceReader *pIReader = NULL;
+                wchar_t *pszSymbolicLink;
+                UINT32 uiSymbolicLinkLen;
+                // UINT ctr1;
+
+                DWORD dwStream = (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM;
+
+                //
+                // Create the media source for the device...
+                //
+                hr = pActivate->ActivateObject(__uuidof(IMFMediaSource), (void**)&pSource);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"ActivateObject", hr);
+                    break;
+                }
+
+                //
+                // Get the symbolic link...
+                //
+                hr = pActivate->GetAllocatedString(
+                    MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
+                    &pszSymbolicLink,
+                    &uiSymbolicLinkLen);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"GetAllocatedString", hr);
+                    break;
+                }
+
+                //
+                // Create an attribute store to hold initialization settings...
+                //
+                hr = MFCreateAttributes(&pAttrib, 2);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"MFCreateAttributes", hr);
+                    break;
+                }
+
+                hr = pAttrib->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"SetUINT32", hr);
+                    break;
+                }
+
+                //
+                // Then create the source reader...
+                //
+                hr = MFCreateSourceReaderFromMediaSource(pSource, pAttrib, &pIReader);
+
+                if (FAILED(hr))
+                {
+                    EventWriteHresultError(M, FL, FN, L"MFCreateSourceReaderFromMediaSource", hr);
+                    break;
+                }
+
+                //
+                // Try to find a suitable output type...
+                //
+                BOOL bFound = FALSE;
+
+                for (UINT ctr1 = 0;; ctr1++)
+                {
+                    hr = pIReader->GetNativeMediaType(dwStream, ctr1, &pType);
+
+                    if (FAILED(hr))
+                    {
+                        EventWriteHresultError(M, FL, FN, L"GetNativeMediaType", hr);
+                        break;
+                    }
+
+                    GUID subType = { 0 };
+
+                    hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+                    //
+                    // Check if its in our table of supported types...
+                    //
+                    for (DWORD k = 0; k < ARRAYSIZE(FormatConversions); k++)
+                    {
+                        if (subType == FormatConversions[k].guidSubType)
+                        {
+                            UINT32 uFrNume, uFrDeno;
+                            UINT32 uParNume, uParDeno;
+                            UINT uiWidth, uiHeight;
+                            LONG lDefaultStride;
+
+                            MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &uiWidth, &uiHeight);
+                            MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &uFrNume, &uFrDeno);
+                            MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &uParNume, &uParDeno);
+                            hr = GetDefaultImageStride(pType, &lDefaultStride);
+
+                            MFMEDIA_INFO mi;
+
+                            StringCchPrintf(mi.szSubtype, MAX_PATH, L"%s", FormatConversions[k].pwszGuidSubType);
+                            mi.lIndex = ctr1;
+                            mi.subTypeGuid = subType;
+                            mi.lResolutionX = uiWidth;
+                            mi.lResolutionY = uiHeight;
+                            mi.lFrameRateNumerator = uFrNume;
+                            mi.lFrameRateDenominator = uFrDeno;
+                            mi.lPxAspectRatioNumerator = uParNume;
+                            mi.lPxAspectRatioDenominator = uParDeno;
+                            mi.lStride = lDefaultStride;
+
+                            infolist.push_back(mi);
+
+                            StringCchPrintf(
+                                szTrace,
+                                MAX_PATH,
+                                L"%s, W: %d, H: %d, Stride: %d, F.Rate: "
+                                L"%d:%d, PAR: %d:%d",
+                                FormatConversions[k].pwszGuidSubType,
+                                uiWidth,
+                                uiHeight,
+                                lDefaultStride,
+                                uFrNume,
+                                uFrDeno,
+                                uParNume,
+                                uParDeno);
+
+                            EventWriteInfoW(M, FL, FN, szTrace);
+                        }
+                    }
+
+                    SafeRelease(&pType);
+
+                    if (hr == MF_E_NO_MORE_TYPES || hr == MF_E_INVALIDSTREAMNUMBER) break;
+                }
+
+                if (hr == MF_E_NO_MORE_TYPES) hr = S_OK;
+
+                if (infolist.size() > 0)
+                {
+                    *ppInfo = (MFMEDIA_INFO*)malloc(infolist.size() * sizeof(MFMEDIA_INFO));
+
+                    if (*ppInfo)
+                    {
+                        *pCount = infolist.size();
+
+                        MFMEDIA_INFO *pInfoTmp = *ppInfo;
+
+                        for (int i = 0; i < infolist.size(); i++)
+                        {
+                            MFMEDIA_INFO infoItem = infolist.at(i);
+                            CopyMemory(pInfoTmp, &infoItem, sizeof(MFMEDIA_INFO));
+                            pInfoTmp++;
+                        }
+                    }
+                }
+
+                SafeRelease(&pActivate);
+                SafeRelease(&pIReader);
+
+                CoTaskMemFree(pszSymbolicLink);
+
+                if (pSource)
+                {
+                    pSource->Shutdown();
+                }
+
+                SafeRelease(&pSource);
+                SafeRelease(&pAttributes);
+                SafeRelease(&pType);
+                SafeRelease(&pOutType);
+            }
+        } while (false);
+
+        SafeRelease(&pAttributes);
+
+        for (DWORD i = 0; i < param.count; i++)
+        {
+            SafeRelease(&param.ppDevices[i]);
+        }
+
+        CoTaskMemFree(param.ppDevices);
+
+        hr = MFShutdown();
+
+        if (FAILED(hr))
+        {
+            EventWriteHresultError(M, FL, FN, L"MFShutdown", hr);
+        }
+
+        return hr;
+    }
 
 private:
-	BOOL m_bRendered;
-	BOOL m_bInitialized;
-	LONG m_lRefCount;
-	FrameCallback m_pfnFrameCallback;
-	LONG m_lWidth;
-	LONG m_lHeight;
-	CMFCameraSource *m_pCamSource;
+    BOOL m_bRendered;
+    BOOL m_bInitialized;
+    LONG m_lRefCount;
+    FrameCallback m_pfnFrameCallback;
+    LONG m_lWidth;
+    LONG m_lHeight;
+    CMFCameraSource *m_pCamSource;
 };
 
 //
@@ -1527,14 +1521,14 @@ private:
 //
 _declspec(dllexport) HRESULT CreateCameraMfInstance(ICameraMf **ppObj)
 {
-	if (ppObj == NULL) return E_POINTER;
+    if (ppObj == NULL) return E_POINTER;
 
-	ICameraMf *pObj = new (std::nothrow) CameraMf();
-	if (pObj == NULL) return E_OUTOFMEMORY;
+    ICameraMf *pObj = new (std::nothrow) CameraMf();
+    if (pObj == NULL) return E_OUTOFMEMORY;
 
-	*ppObj = pObj;
+    *ppObj = pObj;
 
-	(*ppObj)->AddRef();
+    (*ppObj)->AddRef();
 
-	return S_OK;
+    return S_OK;
 }

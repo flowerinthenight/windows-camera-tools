@@ -9,20 +9,20 @@
 
 class CContext : public Context {
 public:
-	CContext() :
-		m_subparamstart(0),
-		m_pCmdSupported(NULL),
-		m_argc(0),
-		m_ppargv(NULL),
-		m_cchlen(0)
-	{}
+    CContext() :
+        m_subparamstart(0),
+        m_pCmdSupported(NULL),
+        m_argc(0),
+        m_ppargv(NULL),
+        m_cchlen(0)
+    {}
 
-	~CContext() {}
+    ~CContext() {}
 
 public:
-	size_t m_subparamstart;
-	BOOL *m_pCmdSupported;
-	int m_argc;
-	wchar_t **m_ppargv;
-	size_t m_cchlen;
+    size_t m_subparamstart;
+    BOOL *m_pCmdSupported;
+    int m_argc;
+    wchar_t **m_ppargv;
+    size_t m_cchlen;
 };
