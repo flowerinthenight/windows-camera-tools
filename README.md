@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/1njgb2uftlijk7u2/branch/master?svg=true)](https://ci.appveyor.com/project/flowerinthenight/windows-camera-tools/branch/master)
+
 # windows-camera-tools
 
 A generic command line tool to control camera properties in Windows. The tool's name is `camera-cmd.exe`. You can also view the information below in command line by running `camera-cmd.exe` without arguments.
