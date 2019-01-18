@@ -87,7 +87,3 @@ Controls the camera flash properties (if supported). `camera_friendly_name` is t
 camera-cmd.exe flash -fname:Integrated Camera
 camera-cmd.exe flash -fname:Integrated Camera -state:2
 ```
-
-# License
-
-[The MIT License](./LICENSE.md)
